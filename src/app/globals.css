@@ -1,0 +1,73 @@
+@import "tailwindcss";
+
+:root {
+  /* Deep blue-green-black surfaces, grayscale text with a cool tinge. */
+  --bg: #0a1210;
+  --bg-elevated: #101a18;
+  --bg-elevated-2: #16211f;
+  --border: #223330;
+  --border-strong: #2d423e;
+
+  --text-primary: #eef3f1;
+  --text-secondary: #9db0ac;
+  --text-tertiary: #62726f;
+
+  --accent: #34d1a8;
+  --accent-strong: #23a88a;
+  --accent-dim: #1c4a3f;
+  --accent-text: #0a1210;
+
+  --danger: #e5654f;
+  --warning: #d1a534;
+
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-bg-elevated: var(--bg-elevated);
+  --color-bg-elevated-2: var(--bg-elevated-2);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-tertiary: var(--text-tertiary);
+
+  --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
+  --color-accent-dim: var(--accent-dim);
+  --color-accent-text: var(--accent-text);
+
+  --color-danger: var(--danger);
+  --color-warning: var(--warning);
+
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text-primary);
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+::selection {
+  background: var(--accent-dim);
+  color: var(--text-primary);
+}
+
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
