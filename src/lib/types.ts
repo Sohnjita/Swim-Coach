@@ -33,12 +33,44 @@ export interface Rep {
   notes?: string;
 }
 
-/** A named group of reps sharing a distance/stroke pattern, e.g. "8 x 100 Breast @1:30". */
+export type LineModifier = "swim" | "kick" | "drill" | "pull";
+
+/** A single "3x100 on 1:30 breast" style line within a block's notation. */
+export interface RepGroupLine {
+  kind: "reps";
+  id: string;
+  count: number;
+  distance: number;
+  intervalSeconds: number | null;
+  stroke: Stroke;
+  modifier: LineModifier;
+  tag?: string; // free text like "ez", "build", "DPS", "descend 1-4"
+}
+
+/** A free-form annotation line, e.g. "Odds: free breathe every 5". */
+export interface TextLine {
+  kind: "text";
+  id: string;
+  text: string;
+}
+
+/** A repeated group, e.g. 2x[ ... ]. */
+export interface RoundLine {
+  kind: "round";
+  id: string;
+  multiplier: number;
+  items: PracticeLine[];
+}
+
+export type PracticeLine = RepGroupLine | TextLine | RoundLine;
+
+/** A labeled block of notation (e.g. "Main") that expands into loggable reps. */
 export interface PracticeSet {
   id: string;
   type: SetType;
-  label: string; // e.g. "8x100 Breast Descend 1-4"
-  reps: Rep[];
+  label: string; // e.g. "Main"
+  lines: PracticeLine[]; // the notation as written
+  reps: Rep[]; // generated from lines, actually logged (time/strokeCount/RPE)
   notes?: string;
 }
 

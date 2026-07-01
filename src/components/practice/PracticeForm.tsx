@@ -5,13 +5,13 @@ import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
 import { db, newId } from "@/lib/db";
 import type { Course, Practice, PracticeSet } from "@/lib/types";
-import { todayISO } from "@/lib/format";
+import { todayISO, formatDateLabel } from "@/lib/format";
 import { takePendingSet } from "@/lib/practiceHelpers";
 import { Segmented } from "@/components/ui/Segmented";
 import { Field, Input } from "@/components/ui/Field";
 import { Button } from "@/components/ui/Button";
 import { Card, CardTitle } from "@/components/ui/Card";
-import { SetEditor } from "./SetEditor";
+import { BlockEditor } from "./BlockEditor";
 
 const COURSES: { label: string; value: Course }[] = [
   { label: "SCY", value: "SCY" },
@@ -19,15 +19,15 @@ const COURSES: { label: string; value: Course }[] = [
   { label: "LCM", value: "LCM" },
 ];
 
-function emptySet(): PracticeSet {
-  return { id: newId(), type: "aerobic", label: "", reps: [] };
+function emptyBlock(): PracticeSet {
+  return { id: newId(), type: "aerobic", label: "", lines: [], reps: [] };
 }
 
 export function PracticeForm({ initial }: { initial?: Practice }) {
   const router = useRouter();
   const [date, setDate] = useState(initial?.date ?? todayISO());
   const [course, setCourse] = useState<Course>(initial?.course ?? "SCY");
-  const [sets, setSets] = useState<PracticeSet[]>(initial?.sets ?? [emptySet()]);
+  const [blocks, setBlocks] = useState<PracticeSet[]>(initial?.sets ?? [emptyBlock()]);
   const [sleepHours, setSleepHours] = useState(initial?.sleepHours?.toString() ?? "");
   const [bodyWeight, setBodyWeight] = useState(
     initial?.bodyWeightKg?.toString() ?? "",
@@ -36,6 +36,7 @@ export function PracticeForm({ initial }: { initial?: Practice }) {
   const [overallRpe, setOverallRpe] = useState(initial?.overallRpe?.toString() ?? "");
   const [notes, setNotes] = useState(initial?.notes ?? "");
   const [saving, setSaving] = useState(false);
+  const [editingDate, setEditingDate] = useState(false);
 
   useEffect(() => {
     if (initial) return; // only prefill fresh practices
@@ -44,20 +45,20 @@ export function PracticeForm({ initial }: { initial?: Practice }) {
     // Reading sessionStorage (a browser-only external system) once on mount —
     // the sanctioned use for an Effect, not a derived-state anti-pattern.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setSets((prev) => {
-      const withoutEmpty = prev.filter((s) => s.reps.length > 0);
+    setBlocks((prev) => {
+      const withoutEmpty = prev.filter((s) => s.lines.length > 0);
       return [...withoutEmpty, pending.set];
     });
     setCourse(pending.course as Course);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  function updateSet(id: string, next: PracticeSet) {
-    setSets((prev) => prev.map((s) => (s.id === id ? next : s)));
+  function updateBlock(id: string, next: PracticeSet) {
+    setBlocks((prev) => prev.map((s) => (s.id === id ? next : s)));
   }
 
-  function removeSet(id: string) {
-    setSets((prev) => prev.filter((s) => s.id !== id));
+  function removeBlock(id: string) {
+    setBlocks((prev) => prev.filter((s) => s.id !== id));
   }
 
   async function save() {
@@ -67,7 +68,7 @@ export function PracticeForm({ initial }: { initial?: Practice }) {
       id: initial?.id ?? newId(),
       date,
       course,
-      sets,
+      sets: blocks,
       sleepHours: sleepHours === "" ? null : Number(sleepHours),
       bodyWeightKg: bodyWeight === "" ? null : Number(bodyWeight),
       gymThatDay,
@@ -83,32 +84,43 @@ export function PracticeForm({ initial }: { initial?: Practice }) {
 
   return (
     <div className="space-y-4 p-4 pb-24">
-      <Card>
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="Date">
-            <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-          </Field>
-          <Field label="Course">
-            <Segmented options={COURSES} value={course} onChange={setCourse} />
-          </Field>
-        </div>
-      </Card>
+      <div className="flex items-center justify-between px-1">
+        {editingDate ? (
+          <input
+            type="date"
+            autoFocus
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            onBlur={() => setEditingDate(false)}
+            className="bg-transparent text-sm text-text-secondary outline-none"
+          />
+        ) : (
+          <button
+            type="button"
+            onClick={() => setEditingDate(true)}
+            className="text-sm text-text-secondary"
+          >
+            {formatDateLabel(date)}
+          </button>
+        )}
+        <Segmented options={COURSES} value={course} onChange={setCourse} />
+      </div>
 
-      {sets.map((set) => (
-        <SetEditor
-          key={set.id}
-          set={set}
-          onChange={(s) => updateSet(set.id, s)}
-          onRemove={() => removeSet(set.id)}
+      {blocks.map((block) => (
+        <BlockEditor
+          key={block.id}
+          block={block}
+          onChange={(s) => updateBlock(block.id, s)}
+          onRemove={() => removeBlock(block.id)}
         />
       ))}
 
       <Button
         variant="secondary"
         className="w-full"
-        onClick={() => setSets((prev) => [...prev, emptySet()])}
+        onClick={() => setBlocks((prev) => [...prev, emptyBlock()])}
       >
-        <Plus size={16} /> Add set
+        <Plus size={16} /> Add block
       </Button>
 
       <Card>

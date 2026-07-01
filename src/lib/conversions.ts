@@ -76,11 +76,26 @@ export function parseTime(input: string): number | null {
   if (!trimmed) return null;
   if (trimmed.includes(":")) {
     const [minPart, secPart] = trimmed.split(":");
-    const mins = Number(minPart);
+    const mins = minPart === "" ? 0 : Number(minPart);
     const secs = Number(secPart);
     if (Number.isNaN(mins) || Number.isNaN(secs)) return null;
     return mins * 60 + secs;
   }
   const val = Number(trimmed);
   return Number.isNaN(val) ? null : val;
+}
+
+/** Formats send-off intervals as "1:30" or ":50" (no fractional seconds). */
+export function formatInterval(seconds: number | null): string {
+  if (seconds === null || Number.isNaN(seconds)) return "--";
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.round(seconds - mins * 60);
+  if (mins > 0) return `${mins}:${String(secs).padStart(2, "0")}`;
+  return `:${String(secs).padStart(2, "0")}`;
+}
+
+/** Parses "1:30", ":50", or "90" into whole seconds. Returns null if unparseable/empty. */
+export function parseInterval(input: string): number | null {
+  const seconds = parseTime(input);
+  return seconds === null ? null : Math.round(seconds);
 }

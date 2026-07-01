@@ -1,21 +1,22 @@
 @import "tailwindcss";
 
 :root {
-  /* Deep blue-green-black surfaces, grayscale text with a cool tinge. */
-  --bg: #0a1210;
-  --bg-elevated: #101a18;
-  --bg-elevated-2: #16211f;
-  --border: #223330;
-  --border-strong: #2d423e;
+  /* Deep pool-water blues with grayscale text. */
+  --bg: #050d16;
+  --bg-elevated: #0d1b2c;
+  --bg-elevated-2: #142639;
+  --border: #1e3349;
+  --border-strong: #2b4560;
 
-  --text-primary: #eef3f1;
-  --text-secondary: #9db0ac;
-  --text-tertiary: #62726f;
+  --text-primary: #eef4fa;
+  --text-secondary: #93a8bd;
+  --text-tertiary: #5e7189;
 
-  --accent: #34d1a8;
-  --accent-strong: #23a88a;
-  --accent-dim: #1c4a3f;
-  --accent-text: #0a1210;
+  --accent: #2f9bf0;
+  --accent-light: #6cc3ff;
+  --accent-strong: #1c7bcc;
+  --accent-dim: #12385c;
+  --accent-text: #04101c;
 
   --danger: #e5654f;
   --warning: #d1a534;
@@ -36,6 +37,7 @@
   --color-text-tertiary: var(--text-tertiary);
 
   --color-accent: var(--accent);
+  --color-accent-light: var(--accent-light);
   --color-accent-strong: var(--accent-strong);
   --color-accent-dim: var(--accent-dim);
   --color-accent-text: var(--accent-text);
@@ -52,8 +54,23 @@ html {
 }
 
 body {
-  background: var(--bg);
   color: var(--text-primary);
+  background-color: var(--bg);
+  /* Looking straight down into a pool: a soft surface highlight, faint
+     caustic glow, and thin lane-line bands fading into the depths. */
+  background-image:
+    radial-gradient(ellipse 120% 60% at 50% -10%, rgba(111, 194, 255, 0.16), transparent 60%),
+    radial-gradient(ellipse 90% 50% at 80% 15%, rgba(47, 155, 240, 0.10), transparent 55%),
+    repeating-linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.02) 0px,
+      rgba(255, 255, 255, 0.02) 1px,
+      transparent 1px,
+      transparent 96px
+    ),
+    linear-gradient(180deg, #08172a 0%, #050d16 45%, #030810 100%);
+  background-attachment: fixed;
+  min-height: 100vh;
 }
 
 * {
@@ -70,4 +87,46 @@ select,
 textarea {
   font: inherit;
   color: inherit;
+}
+
+/* Button depth: glossy gradient fills with an inset highlight and a soft
+   drop shadow, so the few buttons we do show read as physical controls. */
+.btn-primary {
+  background-image: linear-gradient(180deg, var(--accent-light), var(--accent-strong));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    inset 0 -1px 1px rgba(0, 0, 0, 0.12),
+    0 6px 16px -6px rgba(47, 155, 240, 0.55);
+  color: var(--accent-text);
+}
+.btn-primary:active {
+  filter: brightness(0.94);
+  box-shadow:
+    inset 0 1px 2px rgba(0, 0, 0, 0.25),
+    0 2px 8px -4px rgba(47, 155, 240, 0.45);
+}
+
+.btn-secondary {
+  background-image: linear-gradient(180deg, var(--bg-elevated-2), var(--bg-elevated));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 4px 12px -8px rgba(0, 0, 0, 0.6);
+  border: 1px solid var(--border-strong);
+}
+.btn-secondary:active {
+  filter: brightness(0.95);
+}
+
+.btn-danger {
+  background-image: linear-gradient(180deg, rgba(229, 101, 79, 0.24), rgba(229, 101, 79, 0.1));
+  border: 1px solid rgba(229, 101, 79, 0.35);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  color: var(--danger);
+}
+
+.surface-card {
+  background-image: linear-gradient(165deg, var(--bg-elevated) 0%, var(--bg-elevated-2) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 10px 24px -16px rgba(0, 0, 0, 0.65);
 }

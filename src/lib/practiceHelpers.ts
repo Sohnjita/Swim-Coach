@@ -1,40 +1,6 @@
 import { newId } from "./db";
-import type { PracticeSet, Rep, SetType, StartType, Stroke, SuitType } from "./types";
-
-export function makeRep(
-  index: number,
-  distance: number,
-  stroke: Stroke,
-  interval: number | null,
-  start: StartType,
-  suit: SuitType,
-): Rep {
-  return {
-    id: newId(),
-    repIndex: index,
-    distance,
-    stroke,
-    time: null,
-    strokeCount: null,
-    restIntervalSeconds: interval,
-    rpe: null,
-    start,
-    suit,
-  };
-}
-
-export function makeReps(
-  count: number,
-  distance: number,
-  stroke: Stroke,
-  interval: number | null,
-  start: StartType,
-  suit: SuitType,
-): Rep[] {
-  return Array.from({ length: count }, (_, i) =>
-    makeRep(i + 1, distance, stroke, interval, start, suit),
-  );
-}
+import { expandLinesToReps, makeRepGroupLine } from "./lineTree";
+import type { PracticeSet, SetType, Stroke } from "./types";
 
 export function makeSetFromTemplate(
   type: SetType,
@@ -44,11 +10,15 @@ export function makeSetFromTemplate(
   stroke: Stroke,
   interval: number | null,
 ): PracticeSet {
+  const lines = [
+    makeRepGroupLine({ count, distance, stroke, intervalSeconds: interval, modifier: "swim" }),
+  ];
   return {
     id: newId(),
     type,
     label,
-    reps: makeReps(count, distance, stroke, interval, "push", "practice"),
+    lines,
+    reps: expandLinesToReps(lines, "push", "practice"),
   };
 }
 
