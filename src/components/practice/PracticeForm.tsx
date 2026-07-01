@@ -78,7 +78,7 @@ export function PracticeForm({ initial }: { initial?: Practice }) {
     };
     await db.practices.put(practice);
     setSaving(false);
-    router.push(`/practices/${practice.id}`);
+    router.push(`/practices/detail?id=${practice.id}`);
   }
 
   return (

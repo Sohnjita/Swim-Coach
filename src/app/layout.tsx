@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import BottomNav from "@/components/nav/BottomNav";
 import DbBootstrap from "@/components/DbBootstrap";
+import { basePath } from "@/lib/basePath";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -17,7 +18,6 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Swim Coach",
   description: "Personal swim training log, scoring, and meet planning.",
-  manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
@@ -25,10 +25,10 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      { url: "/icons/favicon-32.png", sizes: "32x32", type: "image/png" },
-      { url: "/icons/favicon-16.png", sizes: "16x16", type: "image/png" },
+      { url: `${basePath}/icons/favicon-32.png`, sizes: "32x32", type: "image/png" },
+      { url: `${basePath}/icons/favicon-16.png`, sizes: "16x16", type: "image/png" },
     ],
-    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180" }],
+    apple: [{ url: `${basePath}/apple-touch-icon.png`, sizes: "180x180" }],
   },
 };
 

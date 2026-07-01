@@ -48,7 +48,7 @@ export default function PracticesPage() {
                 ? scorePractice(practice, history, scoringConfig)
                 : { practiceScore: null };
             return (
-              <Link key={practice.id} href={`/practices/${practice.id}`}>
+              <Link key={practice.id} href={`/practices/detail?id=${practice.id}`}>
                 <Card className="flex items-center gap-3">
                   <ScoreRing score={practiceScore} size={48} />
                   <div className="flex-1">

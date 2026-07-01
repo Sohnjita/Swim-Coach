@@ -1,8 +1,8 @@
 "use client";
 
-import { use } from "react";
+import { Suspense } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import { Pencil, Trash2 } from "lucide-react";
 import { db, SCORING_CONFIG_ID } from "@/lib/db";
@@ -15,12 +15,16 @@ import { buildRepHistory, DEFAULT_SCORING_CONFIG, scorePractice, scoreSet } from
 import { formatDateLabel } from "@/lib/format";
 import { formatTime } from "@/lib/conversions";
 
-export default function PracticeDetailPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
-  const { id } = use(params);
+export default function PracticeDetailPage() {
+  return (
+    <Suspense fallback={null}>
+      <PracticeDetail />
+    </Suspense>
+  );
+}
+
+function PracticeDetail() {
+  const id = useSearchParams().get("id") ?? "";
   const router = useRouter();
 
   const practice = useLiveQuery(() => db.practices.get(id), [id]);
@@ -56,7 +60,7 @@ export default function PracticeDetailPage({
         subtitle={`${practice.course} · ${practice.sets.length} sets`}
         action={
           <div className="flex gap-1">
-            <Link href={`/practices/${id}/edit`}>
+            <Link href={`/practices/detail/edit?id=${id}`}>
               <Button variant="ghost" size="icon">
                 <Pencil size={18} />
               </Button>

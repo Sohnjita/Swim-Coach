@@ -107,7 +107,7 @@ export default function DashboardPage() {
               {recentScored.map(({ practice, practiceScore }) => (
                 <li key={practice.id}>
                   <Link
-                    href={`/practices/${practice.id}`}
+                    href={`/practices/detail?id=${practice.id}`}
                     className="flex items-center gap-3"
                   >
                     <ScoreRing score={practiceScore} size={44} />

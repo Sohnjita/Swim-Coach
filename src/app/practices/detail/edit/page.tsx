@@ -1,17 +1,22 @@
 "use client";
 
-import { use } from "react";
+import { Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "@/lib/db";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PracticeForm } from "@/components/practice/PracticeForm";
 
-export default function EditPracticePage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
-  const { id } = use(params);
+export default function EditPracticePage() {
+  return (
+    <Suspense fallback={null}>
+      <EditPractice />
+    </Suspense>
+  );
+}
+
+function EditPractice() {
+  const id = useSearchParams().get("id") ?? "";
   const practice = useLiveQuery(() => db.practices.get(id), [id]);
 
   if (practice === undefined) return null;
