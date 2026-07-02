@@ -24,6 +24,9 @@
 .DS_Store
 *.pem
 
+# local test screenshots
+/shots/
+
 # debug
 npm-debug.log*
 yarn-debug.log*
