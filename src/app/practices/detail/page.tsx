@@ -4,7 +4,7 @@ import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
-import { ChevronDown, Pencil, Trash2 } from "lucide-react";
+import { Check, Copy, Pencil, Trash2 } from "lucide-react";
 import { db, SCORING_CONFIG_ID } from "@/lib/db";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Card, CardTitle } from "@/components/ui/Card";
@@ -12,11 +12,15 @@ import { Button } from "@/components/ui/Button";
 import { ScoreRing } from "@/components/ui/ScoreRing";
 import { Badge } from "@/components/ui/Badge";
 import { NotationDocument } from "@/components/practice/NotationDocument";
+import { formatLines } from "@/lib/lineTree";
 import { buildRepHistory, DEFAULT_SCORING_CONFIG, scorePractice, scoreSet } from "@/lib/scoring";
 import { formatDateLabel } from "@/lib/format";
 import { formatTime } from "@/lib/conversions";
-import { cn } from "@/lib/cn";
-import type { Practice } from "@/lib/types";
+import type { Practice, PracticeSet } from "@/lib/types";
+
+function isSetLogged(set: PracticeSet): boolean {
+  return set.reps.some((rep) => rep.time !== null);
+}
 
 export default function PracticeDetailPage() {
   return (
@@ -76,6 +80,8 @@ function PracticeDetail() {
       />
 
       <div className="space-y-4 p-4">
+        <WrittenWorkout practice={practice} />
+
         <Card className="flex items-center gap-4">
           <ScoreRing score={practiceScore} size={64} label="score" />
           <div>
@@ -86,9 +92,7 @@ function PracticeDetail() {
           </div>
         </Card>
 
-        <WrittenWorkoutCard practice={practice} />
-
-        {practice.sets.map((set) => {
+        {practice.sets.filter(isSetLogged).map((set) => {
           const { repScores, setScore } = scoreSet(
             set,
             practice.course,
@@ -159,37 +163,38 @@ function PracticeDetail() {
   );
 }
 
-function WrittenWorkoutCard({ practice }: { practice: Practice }) {
-  const [expanded, setExpanded] = useState(false);
+function WrittenWorkout({ practice }: { practice: Practice }) {
+  const [copied, setCopied] = useState(false);
+
+  async function handleCopy() {
+    const text = practice.sets
+      .map((set) => [set.label || set.type, ...formatLines(set.lines)].join("\n"))
+      .join("\n\n");
+    await navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  }
 
   return (
-    <Card>
-      <button
-        type="button"
-        onClick={() => setExpanded((v) => !v)}
-        className="flex w-full items-center justify-between"
-      >
-        <CardTitle>Written workout</CardTitle>
-        <ChevronDown
-          size={16}
-          className={cn("text-text-tertiary transition-transform", expanded && "rotate-180")}
-        />
-      </button>
-      {expanded && (
-        <div className="mt-3 space-y-3 border-t border-border pt-3">
-          {practice.sets.map((set) => (
-            <div key={set.id}>
-              <div className="mb-1 flex items-center gap-2">
-                <span className="text-xs font-medium text-text-secondary">
-                  {set.label || set.type}
-                </span>
-                <Badge className="capitalize">{set.type}</Badge>
-              </div>
-              <NotationDocument lines={set.lines} />
-            </div>
-          ))}
-        </div>
-      )}
-    </Card>
+    <div className="px-1">
+      <div className="mb-1 flex justify-end">
+        <button
+          type="button"
+          onClick={handleCopy}
+          className="flex items-center gap-1 text-xs text-text-tertiary active:opacity-70"
+        >
+          {copied ? <Check size={13} /> : <Copy size={13} />}
+          {copied ? "Copied" : "Copy"}
+        </button>
+      </div>
+      <div className="space-y-3">
+        {practice.sets.map((set) => (
+          <div key={set.id}>
+            <p className="mb-1 text-xs text-text-tertiary">{set.label || set.type}</p>
+            <NotationDocument lines={set.lines} />
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }

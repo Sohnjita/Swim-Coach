@@ -1,17 +1,24 @@
-import { Home, Trophy, ListChecks, TestTube, Settings } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+import { Home, Clock, Settings } from "lucide-react";
+import type { ComponentType } from "react";
+import { FlaskBubblesIcon, LinesBulletsIcon } from "@/components/icons/CustomIcons";
+
+export interface TabIconProps {
+  size?: number;
+  strokeWidth?: number;
+  className?: string;
+}
 
 export interface TabDef {
   href: string;
   label: string;
-  icon: LucideIcon;
+  icon: ComponentType<TabIconProps>;
 }
 
 export const TABS: TabDef[] = [
   { href: "/", label: "Home", icon: Home },
-  { href: "/times", label: "Times", icon: Trophy },
-  { href: "/practices", label: "Practices", icon: ListChecks },
-  { href: "/analyze", label: "Analyze", icon: TestTube },
+  { href: "/times", label: "Times", icon: Clock },
+  { href: "/practices", label: "Practices", icon: LinesBulletsIcon },
+  { href: "/analyze", label: "Analyze", icon: FlaskBubblesIcon },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
