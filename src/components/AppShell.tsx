@@ -45,13 +45,13 @@ export default function AppShell({ children }: { children: ReactNode }) {
       <div className="pool-edge-top" />
       <div
         className="fixed inset-x-0 z-20 flags-divider"
-        style={{ top: "calc(var(--safe-top) + 4px)" }}
+        style={{ top: navHeight }}
       />
 
       <div
         className="fixed inset-x-0 z-[1] overflow-y-auto overscroll-contain"
         style={{
-          top: "calc(var(--safe-top) + 4px + 16px)",
+          top: navHeight + FLAGS_HEIGHT,
           bottom: navHeight + FLAGS_HEIGHT,
         }}
       >
@@ -71,7 +71,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
         <div className="mx-auto flex max-w-md items-start py-2">
           {TABS.map(({ href, label, icon: Icon }) => {
             const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
-            const traveled = active && href !== "/";
+            const traveled = active;
             return (
               <button
                 key={href}
@@ -82,6 +82,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
                 className="relative flex flex-1 items-center justify-center"
               >
                 <motion.div
+                  initial={{ y: 0 }}
                   animate={{ y: traveled ? -ascend : 0 }}
                   transition={SWIM_TRANSITION}
                   className="flex flex-col items-center gap-1"

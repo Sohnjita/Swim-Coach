@@ -6,14 +6,14 @@ import { AnimatePresence, motion } from "framer-motion";
 import { CONTENT_TRANSITION } from "@/lib/tabs";
 
 const variants = {
-  hidden: { clipPath: "inset(0% 0% 100% 0%)", opacity: 0.4 },
+  hidden: { clipPath: "inset(100% 0% 0% 0%)", opacity: 0.4 },
   visible: { clipPath: "inset(0% 0% 0% 0%)", opacity: 1 },
 };
 
 /**
  * Wraps routed page content so switching tabs reads as a curtain being
- * dragged down (or pulled back up) rather than an instant swap — synced
- * with the active tab icon's "swim" travel in <TopNav />.
+ * pulled up from the bottom (or dropped back down) rather than an
+ * instant swap — synced with the active tab's "swim" travel in <AppShell />.
  */
 export default function TabTransitionShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();

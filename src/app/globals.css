@@ -100,7 +100,7 @@ body {
   height: 16px;
   background-repeat: repeat-x;
   background-position: center;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='16'%3E%3Cline x1='0' y1='1' x2='24' y2='1' stroke='%23A9C9DE' stroke-opacity='0.35' stroke-width='1'/%3E%3Cpath d='M2 1 L10 1 L6 12 Z' fill='%238CCDEB' fill-opacity='0.5'/%3E%3Cpath d='M14 1 L22 1 L18 12 Z' fill='%23FFFFFF' fill-opacity='0.22'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='16'%3E%3Cline x1='0' y1='1' x2='24' y2='1' stroke='%233a5a78' stroke-opacity='0.4' stroke-width='1'/%3E%3Cpath d='M2 1 L10 1 L6 12 Z' fill='%234a7aa8' fill-opacity='0.3'/%3E%3Cpath d='M14 1 L22 1 L18 12 Z' fill='%2322405c' fill-opacity='0.4'/%3E%3C/svg%3E");
   pointer-events: none;
 }
 
