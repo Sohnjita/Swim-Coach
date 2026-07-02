@@ -27,7 +27,7 @@ export function NotationDocument({
   onDeleteLine,
 }: {
   lines: PracticeLine[];
-  onDeleteLine: (id: string) => void;
+  onDeleteLine?: (id: string) => void;
 }) {
   const rows = flattenForDisplay(lines);
 
@@ -44,13 +44,15 @@ export function NotationDocument({
           style={{ paddingLeft: row.depth * 16 }}
         >
           <span>{row.text}</span>
-          <button
-            type="button"
-            onClick={() => onDeleteLine(row.id)}
-            className="p-1 text-text-tertiary opacity-60 active:opacity-100"
-          >
-            <X size={13} />
-          </button>
+          {onDeleteLine && (
+            <button
+              type="button"
+              onClick={() => onDeleteLine(row.id)}
+              className="p-1 text-text-tertiary opacity-60 active:opacity-100"
+            >
+              <X size={13} />
+            </button>
+          )}
         </div>
       ))}
     </div>

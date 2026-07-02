@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useLiveQuery } from "dexie-react-hooks";
-import { Plus, Layers, ChevronRight } from "lucide-react";
+import { Plus, Layers, ChevronRight, Upload } from "lucide-react";
 import { db, SCORING_CONFIG_ID } from "@/lib/db";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Card } from "@/components/ui/Card";
@@ -31,6 +31,11 @@ export default function PracticesPage() {
             <Link href="/sets">
               <Button variant="ghost" size="icon" aria-label="Set library">
                 <Layers size={20} />
+              </Button>
+            </Link>
+            <Link href="/practices/import">
+              <Button variant="ghost" size="icon" aria-label="Import practices">
+                <Upload size={20} />
               </Button>
             </Link>
             <Link href="/practices/new">

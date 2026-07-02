@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
+import { Download, Upload } from "lucide-react";
 import { db, getProfile, getScoringConfig } from "@/lib/db";
 import { DEFAULT_SCORING_CONFIG } from "@/lib/scoring";
+import { buildBackup, downloadBackup, parseBackupFile, restoreBackup } from "@/lib/backup";
 import type { ScoringConfig, SwimmerProfile } from "@/lib/types";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Card, CardTitle } from "@/components/ui/Card";
@@ -82,6 +84,8 @@ function SettingsForm({
             </div>
           </div>
         </Card>
+
+        <BackupCard />
 
         <Card>
           <CardTitle className="mb-1">Scoring formula</CardTitle>
@@ -193,6 +197,96 @@ function SettingsForm({
         </Button>
       </div>
     </>
+  );
+}
+
+type RestoreStatus = { kind: "success"; count: number } | { kind: "error"; message: string };
+
+function BackupCard() {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [exporting, setExporting] = useState(false);
+  const [restoring, setRestoring] = useState(false);
+  const [status, setStatus] = useState<RestoreStatus | null>(null);
+
+  async function handleExport() {
+    setExporting(true);
+    const payload = await buildBackup();
+    downloadBackup(payload);
+    setExporting(false);
+  }
+
+  async function handleFileSelected(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+
+    setStatus(null);
+    try {
+      const text = await file.text();
+      const payload = parseBackupFile(text);
+      const count =
+        payload.practices.length +
+        payload.setTemplates.length +
+        payload.calendarEvents.length +
+        payload.standards.length +
+        payload.meetResults.length;
+      if (
+        !confirm(
+          `Restore ${count} record(s) from this backup? Records already on this device with a matching id will be overwritten; everything else stays as-is.`,
+        )
+      ) {
+        return;
+      }
+      setRestoring(true);
+      await restoreBackup(payload);
+      setStatus({ kind: "success", count });
+    } catch (err) {
+      setStatus({ kind: "error", message: err instanceof Error ? err.message : "Restore failed." });
+    } finally {
+      setRestoring(false);
+    }
+  }
+
+  return (
+    <Card>
+      <CardTitle className="mb-1">Backup &amp; restore</CardTitle>
+      <p className="mb-3 text-xs text-text-tertiary">
+        All your data lives only on this device. Export a backup file
+        regularly so it isn&apos;t lost if you clear your browser or switch
+        phones — restoring loads a backup file back in.
+      </p>
+      <div className="flex gap-2">
+        <Button
+          variant="secondary"
+          className="flex-1"
+          onClick={handleExport}
+          disabled={exporting}
+        >
+          <Download size={14} /> {exporting ? "Exporting..." : "Export backup"}
+        </Button>
+        <Button
+          variant="secondary"
+          className="flex-1"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={restoring}
+        >
+          <Upload size={14} /> {restoring ? "Restoring..." : "Restore from file"}
+        </Button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="application/json,.json"
+          className="hidden"
+          onChange={handleFileSelected}
+        />
+      </div>
+      {status?.kind === "success" && (
+        <p className="mt-2 text-xs text-accent">Restored {status.count} record(s).</p>
+      )}
+      {status?.kind === "error" && (
+        <p className="mt-2 text-xs text-danger">{status.message}</p>
+      )}
+    </Card>
   );
 }
 
