@@ -1,9 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Outfit, JetBrains_Mono } from "next/font/google";
-import TopNav from "@/components/nav/TopNav";
+import AppShell from "@/components/AppShell";
 import DbBootstrap from "@/components/DbBootstrap";
 import PoolLanes from "@/components/PoolLanes";
-import TabTransitionShell from "@/components/TabTransitionShell";
 import { basePath } from "@/lib/basePath";
 import "./globals.css";
 
@@ -52,18 +51,10 @@ export default function RootLayout({
       lang="en"
       className={`${displayFont.variable} ${monoFont.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-bg text-text-primary">
+      <body className="h-full overflow-hidden bg-bg text-text-primary">
         <DbBootstrap />
         <PoolLanes />
-        <div className="pool-edge-top" />
-        <TopNav />
-        <div
-          className="relative z-[1] flex-1 pb-[calc(4px+var(--safe-bottom))]"
-          style={{ paddingTop: "calc(var(--safe-top) + 84px)" }}
-        >
-          <TabTransitionShell>{children}</TabTransitionShell>
-        </div>
-        <div className="pool-edge-bottom" />
+        <AppShell>{children}</AppShell>
       </body>
     </html>
   );

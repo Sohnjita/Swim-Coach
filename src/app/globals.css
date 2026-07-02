@@ -67,7 +67,11 @@ body {
     radial-gradient(ellipse 100% 60% at 88% 20%, rgba(90, 165, 205, 0.16), transparent 55%),
     linear-gradient(180deg, #123650 0%, #0a2138 30%, #061423 60%, #030d18 100%);
   background-attachment: fixed;
-  min-height: 100vh;
+}
+
+html,
+body {
+  height: 100%;
 }
 
 /* A thin poolside coping-tile cap, always pinned at the very top of the
