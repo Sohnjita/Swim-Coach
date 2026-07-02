@@ -7,29 +7,28 @@ import { TABS, SWIM_TRANSITION } from "@/lib/tabs";
 import { cn } from "@/lib/cn";
 import TabTransitionShell from "./TabTransitionShell";
 
-const ICON_SIZE = 36; // px, matches h-9 w-9 — kept constant so descending
-// never changes the icon's box size, which would throw off the symmetry math.
-const ROW_TOP_PADDING = 8; // px, matches the row's py-2 top padding
+const UNIT_HEIGHT = 52; // px, icon(36) + gap(4) + label(~12) — the whole traveling unit
+const ROW_BOTTOM_PADDING = 8; // px, matches the row's py-2 bottom padding
+const CAP_HEIGHT = 4; // px, matches .pool-edge-bottom's height
+const FLAGS_HEIGHT = 16; // px, matches .flags-divider's height
 
 export default function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const navRef = useRef<HTMLDivElement>(null);
+  const navOuterRef = useRef<HTMLDivElement>(null);
   const [navHeight, setNavHeight] = useState(84);
-  const [descend, setDescend] = useState(0);
+  const [ascend, setAscend] = useState(0);
 
   useEffect(() => {
     function update() {
-      if (!navRef.current) return;
-      setNavHeight(navRef.current.offsetHeight);
-      // The resting gap from the viewport top to an icon's top edge is
-      // (resolved safe-area + edge cap) padding on the nav bar, plus the
-      // row's own top padding. Deriving it from computed styles (rather
-      // than measuring any one tab's rendered rect) keeps it stable
-      // regardless of which tab happens to be active right now.
-      const topPad = parseFloat(getComputedStyle(navRef.current).paddingTop) || 0;
-      const restingTop = topPad + ROW_TOP_PADDING;
-      setDescend(Math.max(0, window.innerHeight - 2 * restingTop - ICON_SIZE));
+      if (!navOuterRef.current) return;
+      setNavHeight(navOuterRef.current.offsetHeight);
+      // Gap from the viewport bottom to the resting unit's near edge: the
+      // outer container's own (safe-area-aware) bottom padding, plus the
+      // pool-edge cap, plus the row's own bottom padding.
+      const bottomPad = parseFloat(getComputedStyle(navOuterRef.current).paddingBottom) || 0;
+      const restGap = bottomPad + CAP_HEIGHT + ROW_BOTTOM_PADDING;
+      setAscend(Math.max(0, window.innerHeight - 2 * restGap - UNIT_HEIGHT));
     }
     update();
     window.addEventListener("resize", update);
@@ -45,14 +44,34 @@ export default function AppShell({ children }: { children: ReactNode }) {
     <>
       <div className="pool-edge-top" />
       <div
-        ref={navRef}
-        className="fixed inset-x-0 top-0 z-30"
-        style={{ paddingTop: "calc(var(--safe-top) + 4px)" }}
+        className="fixed inset-x-0 z-20 flags-divider"
+        style={{ top: "calc(var(--safe-top) + 4px)" }}
+      />
+
+      <div
+        className="fixed inset-x-0 z-[1] overflow-y-auto overscroll-contain"
+        style={{
+          top: "calc(var(--safe-top) + 4px + 16px)",
+          bottom: navHeight + FLAGS_HEIGHT,
+        }}
+      >
+        <TabTransitionShell>{children}</TabTransitionShell>
+      </div>
+
+      <div
+        className="fixed inset-x-0 z-20 flags-divider"
+        style={{ bottom: navHeight }}
+      />
+
+      <div
+        ref={navOuterRef}
+        className="fixed inset-x-0 bottom-0 z-30"
+        style={{ paddingBottom: "var(--safe-bottom)" }}
       >
         <div className="mx-auto flex max-w-md items-start py-2">
           {TABS.map(({ href, label, icon: Icon }) => {
             const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
-            const descended = active && href !== "/";
+            const traveled = active && href !== "/";
             return (
               <button
                 key={href}
@@ -60,44 +79,49 @@ export default function AppShell({ children }: { children: ReactNode }) {
                 onClick={() => handleClick(href, active)}
                 aria-label={label}
                 aria-pressed={active}
-                className="flex flex-1 flex-col items-center gap-1"
+                className="relative flex flex-1 items-center justify-center"
               >
-                <motion.span
-                  animate={{ y: descended ? descend : 0 }}
+                <motion.div
+                  animate={{ y: traveled ? -ascend : 0 }}
                   transition={SWIM_TRANSITION}
-                  className={cn(
-                    "z-10 flex h-9 w-9 items-center justify-center rounded-full",
-                    active ? "buoy-active" : "buoy-inactive",
-                  )}
+                  className="flex flex-col items-center gap-1"
                 >
-                  <Icon
-                    size={active ? 18 : 15}
-                    strokeWidth={active ? 1.5 : 1.25}
-                    className={active ? "text-accent-text" : "text-text-tertiary"}
-                  />
-                </motion.span>
-                <span
-                  className={cn(
-                    "text-[10px] leading-none",
-                    active ? "font-medium text-accent" : "text-text-tertiary",
-                  )}
-                >
-                  {label}
-                </span>
+                  <span
+                    className={cn(
+                      "z-10 flex h-9 w-9 items-center justify-center rounded-full",
+                      active ? "buoy-active" : "buoy-inactive",
+                    )}
+                  >
+                    <Icon
+                      size={active ? 18 : 15}
+                      strokeWidth={active ? 1.5 : 1.25}
+                      className={active ? "text-accent-text" : "text-text-tertiary"}
+                    />
+                  </span>
+                  <span
+                    className={cn(
+                      "text-[10px] leading-none",
+                      active ? "font-medium text-accent" : "text-text-tertiary",
+                    )}
+                  >
+                    {label}
+                  </span>
+                </motion.div>
+
+                {traveled && (
+                  <span
+                    aria-hidden
+                    className="absolute inset-0 flex items-center justify-center"
+                  >
+                    <span className="h-1.5 w-1.5 rounded-full bg-text-tertiary/60" />
+                  </span>
+                )}
               </button>
             );
           })}
         </div>
+        <div className="pool-edge-bottom" />
       </div>
-
-      <div
-        className="fixed inset-x-0 z-[1] overflow-y-auto overscroll-contain"
-        style={{ top: navHeight, bottom: navHeight }}
-      >
-        <TabTransitionShell>{children}</TabTransitionShell>
-      </div>
-
-      <div className="pool-edge-bottom" />
     </>
   );
 }

@@ -1,16 +1,12 @@
 import type { Metadata, Viewport } from "next";
-import { Outfit, JetBrains_Mono } from "next/font/google";
+import { JetBrains_Mono } from "next/font/google";
 import AppShell from "@/components/AppShell";
 import DbBootstrap from "@/components/DbBootstrap";
 import PoolLanes from "@/components/PoolLanes";
 import { basePath } from "@/lib/basePath";
 import "./globals.css";
 
-const displayFont = Outfit({
-  variable: "--font-display",
-  subsets: ["latin"],
-});
-
+// Same font used for the practice notation display — used app-wide now.
 const monoFont = JetBrains_Mono({
   variable: "--font-mono-crisp",
   subsets: ["latin"],
@@ -49,7 +45,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${displayFont.variable} ${monoFont.variable} h-full antialiased`}
+      className={`${monoFont.variable} h-full antialiased`}
     >
       <body className="h-full overflow-hidden bg-bg text-text-primary">
         <DbBootstrap />

@@ -47,7 +47,7 @@
   --color-dot-meal: var(--dot-meal);
   --color-dot-sleep: var(--dot-sleep);
 
-  --font-sans: var(--font-display);
+  --font-sans: var(--font-mono-crisp);
   --font-mono: var(--font-mono-crisp);
 }
 
@@ -88,12 +88,19 @@ body {
 
 /* Matching cap under the bottom nav's tab icons, at the very bottom edge. */
 .pool-edge-bottom {
-  position: fixed;
-  inset: auto 0 0 0;
-  height: calc(var(--safe-bottom) + 4px);
-  z-index: 5;
+  height: 4px;
   background-color: #3a6288;
   box-shadow: 0 -1px 0 rgba(255, 255, 255, 0.1), 0 -2px 8px -3px rgba(0, 0, 0, 0.55);
+  pointer-events: none;
+}
+
+/* Backstroke-flags divider: a rope with alternating pennants, marking the
+   seam between the pool edge / nav bands and the scrollable content. */
+.flags-divider {
+  height: 16px;
+  background-repeat: repeat-x;
+  background-position: center;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='16'%3E%3Cline x1='0' y1='1' x2='24' y2='1' stroke='%23A9C9DE' stroke-opacity='0.35' stroke-width='1'/%3E%3Cpath d='M2 1 L10 1 L6 12 Z' fill='%238CCDEB' fill-opacity='0.5'/%3E%3Cpath d='M14 1 L22 1 L18 12 Z' fill='%23FFFFFF' fill-opacity='0.22'/%3E%3C/svg%3E");
   pointer-events: none;
 }
 
