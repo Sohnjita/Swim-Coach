@@ -15,12 +15,9 @@ export const TABS: TabDef[] = [
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
+// Shared by both the traveling tab icon and the content reveal so the
+// content pulls up/down with the tab, in lockstep, at the same pace.
 export const SWIM_TRANSITION = {
   duration: 0.5,
-  ease: [0.22, 0.61, 0.36, 1] as [number, number, number, number],
-};
-
-export const CONTENT_TRANSITION = {
-  duration: 0.28,
   ease: [0.22, 0.61, 0.36, 1] as [number, number, number, number],
 };

@@ -78,6 +78,21 @@ export function removeLineById(lines: PracticeLine[], id: string): PracticeLine[
     );
 }
 
+/** Recursively replaces a line by id (preserving its position) in a line tree. */
+export function updateLineById(
+  lines: PracticeLine[],
+  id: string,
+  next: PracticeLine,
+): PracticeLine[] {
+  return lines.map((line) => {
+    if (line.id === id) return next;
+    if (line.kind === "round") {
+      return { ...line, items: updateLineById(line.items, id, next) };
+    }
+    return line;
+  });
+}
+
 /** Expands notation lines into flat, unlogged Rep instances (times/RPE/strokeCount null). */
 export function expandLinesToReps(
   lines: PracticeLine[],

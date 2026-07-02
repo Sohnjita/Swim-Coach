@@ -1,19 +1,22 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
-import { Pencil, Trash2 } from "lucide-react";
+import { ChevronDown, Pencil, Trash2 } from "lucide-react";
 import { db, SCORING_CONFIG_ID } from "@/lib/db";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Card, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { ScoreRing } from "@/components/ui/ScoreRing";
 import { Badge } from "@/components/ui/Badge";
+import { NotationDocument } from "@/components/practice/NotationDocument";
 import { buildRepHistory, DEFAULT_SCORING_CONFIG, scorePractice, scoreSet } from "@/lib/scoring";
 import { formatDateLabel } from "@/lib/format";
 import { formatTime } from "@/lib/conversions";
+import { cn } from "@/lib/cn";
+import type { Practice } from "@/lib/types";
 
 export default function PracticeDetailPage() {
   return (
@@ -83,6 +86,8 @@ function PracticeDetail() {
           </div>
         </Card>
 
+        <WrittenWorkoutCard practice={practice} />
+
         {practice.sets.map((set) => {
           const { repScores, setScore } = scoreSet(
             set,
@@ -151,5 +156,40 @@ function PracticeDetail() {
         </Card>
       </div>
     </div>
+  );
+}
+
+function WrittenWorkoutCard({ practice }: { practice: Practice }) {
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <Card>
+      <button
+        type="button"
+        onClick={() => setExpanded((v) => !v)}
+        className="flex w-full items-center justify-between"
+      >
+        <CardTitle>Written workout</CardTitle>
+        <ChevronDown
+          size={16}
+          className={cn("text-text-tertiary transition-transform", expanded && "rotate-180")}
+        />
+      </button>
+      {expanded && (
+        <div className="mt-3 space-y-3 border-t border-border pt-3">
+          {practice.sets.map((set) => (
+            <div key={set.id}>
+              <div className="mb-1 flex items-center gap-2">
+                <span className="text-xs font-medium text-text-secondary">
+                  {set.label || set.type}
+                </span>
+                <Badge className="capitalize">{set.type}</Badge>
+              </div>
+              <NotationDocument lines={set.lines} />
+            </div>
+          ))}
+        </div>
+      )}
+    </Card>
   );
 }

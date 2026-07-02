@@ -49,7 +49,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
       />
 
       <div
-        className="fixed inset-x-0 z-[1] overflow-y-auto overscroll-contain"
+        className="fixed inset-x-0 z-[1] overflow-hidden"
         style={{
           top: navHeight + FLAGS_HEIGHT,
           bottom: navHeight + FLAGS_HEIGHT,

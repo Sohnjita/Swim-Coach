@@ -2,8 +2,15 @@
 
 import { useState } from "react";
 import { Trash2, RefreshCw } from "lucide-react";
-import type { PracticeSet, Rep, RepGroupLine, RoundLine, SetType } from "@/lib/types";
-import { makeRepGroupLine, makeRoundLine, makeTextLine, removeLineById, expandLinesToReps } from "@/lib/lineTree";
+import type { PracticeLine, PracticeSet, Rep, RepGroupLine, RoundLine, SetType } from "@/lib/types";
+import {
+  expandLinesToReps,
+  makeRepGroupLine,
+  makeRoundLine,
+  makeTextLine,
+  removeLineById,
+  updateLineById,
+} from "@/lib/lineTree";
 import { NotationDocument } from "./NotationDocument";
 import { LineComposer } from "./LineComposer";
 import { RepRow } from "./RepRow";
@@ -64,6 +71,14 @@ export function BlockEditor({
     onChange({ ...block, lines: removeLineById(block.lines, id) });
   }
 
+  function updateLine(id: string, next: PracticeLine) {
+    if (openRound && openRound.items.some((i) => i.id === id)) {
+      setOpenRound({ ...openRound, items: updateLineById(openRound.items, id, next) });
+      return;
+    }
+    onChange({ ...block, lines: updateLineById(block.lines, id, next) });
+  }
+
   function generateReps() {
     if (block.reps.length > 0) {
       if (!confirm("This replaces any times you've already logged for this block. Continue?")) {
@@ -107,12 +122,12 @@ export function BlockEditor({
         onChange={(type) => onChange({ ...block, type })}
       />
 
-      <NotationDocument lines={block.lines} onDeleteLine={deleteLine} />
+      <NotationDocument lines={block.lines} onDeleteLine={deleteLine} onUpdateLine={updateLine} />
 
       {openRound && (
         <div className="rounded-xl border border-dashed border-accent/50 p-2">
           <p className="mb-1 text-xs text-accent">Building {openRound.multiplier}x[ ...</p>
-          <NotationDocument lines={openRound.items} onDeleteLine={deleteLine} />
+          <NotationDocument lines={openRound.items} onDeleteLine={deleteLine} onUpdateLine={updateLine} />
         </div>
       )}
 
