@@ -1,4 +1,6 @@
-const LANE_COUNT = 5; // matches BottomNav's tab count
+import { TABS } from "@/lib/tabs";
+
+const LANE_COUNT = TABS.length;
 
 /**
  * Decorative fixed background: dividing lines between lanes (not one per

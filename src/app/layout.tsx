@@ -1,8 +1,9 @@
 import type { Metadata, Viewport } from "next";
 import { Outfit, JetBrains_Mono } from "next/font/google";
-import BottomNav from "@/components/nav/BottomNav";
+import TopNav from "@/components/nav/TopNav";
 import DbBootstrap from "@/components/DbBootstrap";
 import PoolLanes from "@/components/PoolLanes";
+import TabTransitionShell from "@/components/TabTransitionShell";
 import { basePath } from "@/lib/basePath";
 import "./globals.css";
 
@@ -55,10 +56,14 @@ export default function RootLayout({
         <DbBootstrap />
         <PoolLanes />
         <div className="pool-edge-top" />
-        <div className="relative z-[1] flex-1 pb-[calc(64px+var(--safe-bottom))]">
-          {children}
+        <TopNav />
+        <div
+          className="relative z-[1] flex-1 pb-[calc(4px+var(--safe-bottom))]"
+          style={{ paddingTop: "calc(var(--safe-top) + 84px)" }}
+        >
+          <TabTransitionShell>{children}</TabTransitionShell>
         </div>
-        <BottomNav />
+        <div className="pool-edge-bottom" />
       </body>
     </html>
   );
