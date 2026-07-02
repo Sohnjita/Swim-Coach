@@ -1,16 +1,19 @@
 const LANE_COUNT = 5; // matches BottomNav's tab count
 
-/** Decorative fixed background: vertical lane lines with periodic "buoy" ticks. */
+/**
+ * Decorative fixed background: dividing lines between lanes (not one per
+ * tab) — tab icons sit in the center of each lane, between the lines, the
+ * way a swimmer sits between two lane ropes rather than on top of one.
+ */
 export default function PoolLanes() {
   return (
-    <div
-      aria-hidden
-      className="pointer-events-none fixed inset-0 z-0 mx-auto flex max-w-md"
-    >
-      {Array.from({ length: LANE_COUNT }).map((_, i) => (
-        <div key={i} className="flex flex-1 justify-center">
-          <div className="lane-buoys" />
-        </div>
+    <div aria-hidden className="pointer-events-none fixed inset-0 z-0 mx-auto max-w-md">
+      {Array.from({ length: LANE_COUNT - 1 }).map((_, i) => (
+        <div
+          key={i}
+          className="lane-buoys absolute top-0 h-full -translate-x-1/2"
+          style={{ left: `${((i + 1) / LANE_COUNT) * 100}%` }}
+        />
       ))}
     </div>
   );

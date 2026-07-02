@@ -73,18 +73,18 @@ body {
 .pool-edge-top {
   position: fixed;
   inset: 0 0 auto 0;
-  height: calc(var(--safe-top) + 10px);
+  height: calc(var(--safe-top) + 4px);
   z-index: 40;
-  background-image: linear-gradient(180deg, #2f4c6b 0%, #1a2d42 75%, transparent 100%);
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.1), 0 4px 12px -4px rgba(0, 0, 0, 0.55);
+  background-image: linear-gradient(180deg, #2f4c6b 0%, #1a2d42 80%, transparent 100%);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.1), 0 2px 8px -3px rgba(0, 0, 0, 0.55);
   pointer-events: none;
 }
 
-/* Matching cap along the top edge of the bottom nav bar. */
+/* Matching cap under the bottom nav's tab icons, at the very bottom edge. */
 .pool-edge-bottom {
-  height: 10px;
-  background-image: linear-gradient(0deg, #2f4c6b 0%, #1a2d42 75%, transparent 100%);
-  box-shadow: 0 -1px 0 rgba(255, 255, 255, 0.1), 0 -4px 12px -4px rgba(0, 0, 0, 0.55);
+  height: 4px;
+  background-color: #2f4c6b;
+  box-shadow: 0 -1px 0 rgba(255, 255, 255, 0.1), 0 -2px 8px -3px rgba(0, 0, 0, 0.55);
   pointer-events: none;
 }
 

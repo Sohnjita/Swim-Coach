@@ -21,7 +21,6 @@ export default function BottomNav() {
       className="fixed inset-x-0 bottom-0 z-20"
       style={{ paddingBottom: "var(--safe-bottom)" }}
     >
-      <div className="pool-edge-bottom" />
       <div className="mx-auto flex h-16 max-w-md items-center">
         {items.map(({ href, label, icon: Icon }) => {
           const active =
@@ -51,6 +50,7 @@ export default function BottomNav() {
           );
         })}
       </div>
+      <div className="pool-edge-bottom" />
     </nav>
   );
 }
