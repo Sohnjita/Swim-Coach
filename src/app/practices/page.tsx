@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useLiveQuery } from "dexie-react-hooks";
-import { Plus, ChevronRight } from "lucide-react";
+import { Plus, Layers, ChevronRight } from "lucide-react";
 import { db, SCORING_CONFIG_ID } from "@/lib/db";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Card } from "@/components/ui/Card";
@@ -25,13 +25,20 @@ export default function PracticesPage() {
   return (
     <div>
       <PageHeader
-        title="Practice Log"
+        title="Practices"
         action={
-          <Link href="/practices/new">
-            <Button variant="ghost" size="icon">
-              <Plus size={20} />
-            </Button>
-          </Link>
+          <div className="flex gap-1">
+            <Link href="/sets">
+              <Button variant="ghost" size="icon" aria-label="Set library">
+                <Layers size={20} />
+              </Button>
+            </Link>
+            <Link href="/practices/new">
+              <Button variant="ghost" size="icon" aria-label="Log a practice">
+                <Plus size={20} />
+              </Button>
+            </Link>
+          </div>
         }
       />
       <div className="space-y-3 p-4">

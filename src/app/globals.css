@@ -12,9 +12,9 @@
   --text-secondary: #93a8bd;
   --text-tertiary: #5e7189;
 
-  --accent: #3d7cc9;
-  --accent-strong: #28598f;
-  --accent-dim: #16324e;
+  --accent: #4a7aa8;
+  --accent-strong: #325b7e;
+  --accent-dim: #1a3450;
   --accent-text: #f3f7fb;
 
   --danger: #e5654f;
@@ -47,8 +47,8 @@
   --color-dot-meal: var(--dot-meal);
   --color-dot-sleep: var(--dot-sleep);
 
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-display);
+  --font-mono: var(--font-mono-crisp);
 }
 
 html {
@@ -58,12 +58,14 @@ html {
 body {
   color: var(--text-primary);
   background-color: var(--bg);
-  /* Looking straight down into a pool: a soft surface highlight and faint
-     caustic glow over deep water. Lane lines are rendered by <PoolLanes />. */
+  /* Looking straight down into clear, sunlit water: a bright surface
+     highlight and soft caustic glow that fade into depth. Lane lines are
+     rendered by <PoolLanes />. */
   background-image:
-    radial-gradient(ellipse 120% 60% at 50% -10%, rgba(80, 140, 190, 0.14), transparent 60%),
-    radial-gradient(ellipse 90% 50% at 80% 15%, rgba(61, 124, 201, 0.08), transparent 55%),
-    linear-gradient(180deg, #08172a 0%, #050d16 45%, #030810 100%);
+    radial-gradient(ellipse 140% 70% at 50% -15%, rgba(140, 205, 235, 0.4), transparent 65%),
+    radial-gradient(ellipse 100% 60% at 15% 5%, rgba(110, 185, 220, 0.22), transparent 60%),
+    radial-gradient(ellipse 100% 60% at 88% 20%, rgba(90, 165, 205, 0.16), transparent 55%),
+    linear-gradient(180deg, #123650 0%, #0a2138 30%, #061423 60%, #030d18 100%);
   background-attachment: fixed;
   min-height: 100vh;
 }
@@ -75,7 +77,7 @@ body {
   inset: 0 0 auto 0;
   height: calc(var(--safe-top) + 4px);
   z-index: 40;
-  background-image: linear-gradient(180deg, #2f4c6b 0%, #1a2d42 80%, transparent 100%);
+  background-image: linear-gradient(180deg, #3a6288 0%, #1f3a54 80%, transparent 100%);
   box-shadow: 0 1px 0 rgba(255, 255, 255, 0.1), 0 2px 8px -3px rgba(0, 0, 0, 0.55);
   pointer-events: none;
 }
@@ -83,7 +85,7 @@ body {
 /* Matching cap under the bottom nav's tab icons, at the very bottom edge. */
 .pool-edge-bottom {
   height: 4px;
-  background-color: #2f4c6b;
+  background-color: #3a6288;
   box-shadow: 0 -1px 0 rgba(255, 255, 255, 0.1), 0 -2px 8px -3px rgba(0, 0, 0, 0.55);
   pointer-events: none;
 }

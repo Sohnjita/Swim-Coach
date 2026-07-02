@@ -2,15 +2,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, ListChecks, Layers, CalendarDays, Trophy } from "lucide-react";
+import { Home, ListChecks, TrendingUp, Settings, Trophy } from "lucide-react";
 import { cn } from "@/lib/cn";
 
 const items = [
   { href: "/", label: "Home", icon: Home },
-  { href: "/practices", label: "Log", icon: ListChecks },
-  { href: "/sets", label: "Sets", icon: Layers },
-  { href: "/calendar", label: "Calendar", icon: CalendarDays },
   { href: "/times", label: "Times", icon: Trophy },
+  { href: "/practices", label: "Practices", icon: ListChecks },
+  { href: "/analyze", label: "Analyze", icon: TrendingUp },
+  { href: "/settings", label: "Settings", icon: Settings },
 ];
 
 export default function BottomNav() {
@@ -21,7 +21,7 @@ export default function BottomNav() {
       className="fixed inset-x-0 bottom-0 z-20"
       style={{ paddingBottom: "var(--safe-bottom)" }}
     >
-      <div className="mx-auto flex h-16 max-w-md items-center">
+      <div className="mx-auto flex max-w-md items-start py-1.5">
         {items.map(({ href, label, icon: Icon }) => {
           const active =
             href === "/" ? pathname === "/" : pathname.startsWith(href);
@@ -29,8 +29,7 @@ export default function BottomNav() {
             <Link
               key={href}
               href={href}
-              aria-label={label}
-              className="flex flex-1 items-center justify-center"
+              className="flex flex-1 flex-col items-center gap-1"
             >
               <span
                 className={cn(
@@ -45,6 +44,14 @@ export default function BottomNav() {
                   strokeWidth={active ? 2.25 : 1.75}
                   className={active ? "text-accent-text" : "text-text-tertiary"}
                 />
+              </span>
+              <span
+                className={cn(
+                  "text-[10px] leading-none",
+                  active ? "font-medium text-accent" : "text-text-tertiary",
+                )}
+              >
+                {label}
               </span>
             </Link>
           );
