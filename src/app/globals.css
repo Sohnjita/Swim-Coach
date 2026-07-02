@@ -12,14 +12,15 @@
   --text-secondary: #93a8bd;
   --text-tertiary: #5e7189;
 
-  --accent: #2f9bf0;
-  --accent-light: #6cc3ff;
-  --accent-strong: #1c7bcc;
-  --accent-dim: #12385c;
-  --accent-text: #04101c;
+  --accent: #3d7cc9;
+  --accent-strong: #28598f;
+  --accent-dim: #16324e;
+  --accent-text: #f3f7fb;
 
   --danger: #e5654f;
   --warning: #d1a534;
+  --dot-meal: #cf8465;
+  --dot-sleep: #7c74bd;
 
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
@@ -37,13 +38,14 @@
   --color-text-tertiary: var(--text-tertiary);
 
   --color-accent: var(--accent);
-  --color-accent-light: var(--accent-light);
   --color-accent-strong: var(--accent-strong);
   --color-accent-dim: var(--accent-dim);
   --color-accent-text: var(--accent-text);
 
   --color-danger: var(--danger);
   --color-warning: var(--warning);
+  --color-dot-meal: var(--dot-meal);
+  --color-dot-sleep: var(--dot-sleep);
 
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
@@ -56,21 +58,49 @@ html {
 body {
   color: var(--text-primary);
   background-color: var(--bg);
-  /* Looking straight down into a pool: a soft surface highlight, faint
-     caustic glow, and thin lane-line bands fading into the depths. */
+  /* Looking straight down into a pool: a soft surface highlight and faint
+     caustic glow over deep water. Lane lines are rendered by <PoolLanes />. */
   background-image:
-    radial-gradient(ellipse 120% 60% at 50% -10%, rgba(111, 194, 255, 0.16), transparent 60%),
-    radial-gradient(ellipse 90% 50% at 80% 15%, rgba(47, 155, 240, 0.10), transparent 55%),
-    repeating-linear-gradient(
-      90deg,
-      rgba(255, 255, 255, 0.02) 0px,
-      rgba(255, 255, 255, 0.02) 1px,
-      transparent 1px,
-      transparent 96px
-    ),
+    radial-gradient(ellipse 120% 60% at 50% -10%, rgba(80, 140, 190, 0.14), transparent 60%),
+    radial-gradient(ellipse 90% 50% at 80% 15%, rgba(61, 124, 201, 0.08), transparent 55%),
     linear-gradient(180deg, #08172a 0%, #050d16 45%, #030810 100%);
   background-attachment: fixed;
   min-height: 100vh;
+}
+
+/* A thin poolside coping-tile cap, always pinned at the very top of the
+   viewport so the water background never looks like it "starts" abruptly. */
+.pool-edge-top {
+  position: fixed;
+  inset: 0 0 auto 0;
+  height: calc(var(--safe-top) + 10px);
+  z-index: 40;
+  background-image: linear-gradient(180deg, #2f4c6b 0%, #1a2d42 75%, transparent 100%);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.1), 0 4px 12px -4px rgba(0, 0, 0, 0.55);
+  pointer-events: none;
+}
+
+/* Matching cap along the top edge of the bottom nav bar. */
+.pool-edge-bottom {
+  height: 10px;
+  background-image: linear-gradient(0deg, #2f4c6b 0%, #1a2d42 75%, transparent 100%);
+  box-shadow: 0 -1px 0 rgba(255, 255, 255, 0.1), 0 -4px 12px -4px rgba(0, 0, 0, 0.55);
+  pointer-events: none;
+}
+
+/* Lane-line "buoys": periodic tick marks down each background lane line. */
+.lane-buoys {
+  width: 2px;
+  height: 100%;
+  background-image:
+    repeating-linear-gradient(
+      180deg,
+      rgba(180, 210, 235, 0.28) 0px,
+      rgba(180, 210, 235, 0.28) 5px,
+      transparent 5px,
+      transparent 44px
+    ),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.05));
 }
 
 * {
@@ -92,18 +122,18 @@ textarea {
 /* Button depth: glossy gradient fills with an inset highlight and a soft
    drop shadow, so the few buttons we do show read as physical controls. */
 .btn-primary {
-  background-image: linear-gradient(180deg, var(--accent-light), var(--accent-strong));
+  background-image: linear-gradient(180deg, var(--accent), var(--accent-strong));
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.35),
-    inset 0 -1px 1px rgba(0, 0, 0, 0.12),
-    0 6px 16px -6px rgba(47, 155, 240, 0.55);
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    inset 0 -1px 1px rgba(0, 0, 0, 0.2),
+    0 6px 16px -6px rgba(22, 50, 78, 0.7);
   color: var(--accent-text);
 }
 .btn-primary:active {
   filter: brightness(0.94);
   box-shadow:
     inset 0 1px 2px rgba(0, 0, 0, 0.25),
-    0 2px 8px -4px rgba(47, 155, 240, 0.45);
+    0 2px 8px -4px rgba(22, 50, 78, 0.6);
 }
 
 .btn-secondary {

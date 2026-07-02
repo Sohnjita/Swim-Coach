@@ -11,15 +11,13 @@ export function PageHeader({
 }) {
   return (
     <div
-      className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-bg/85 px-4 pb-3 backdrop-blur-md"
-      style={{ paddingTop: "calc(var(--safe-top) + 16px)" }}
+      className="relative z-10 flex items-center justify-end px-4 pb-2"
+      style={{ paddingTop: "calc(var(--safe-top) + 14px)" }}
     >
-      <div>
-        <h1 className="text-xl font-semibold text-text-primary">{title}</h1>
-        {subtitle && (
-          <p className="text-sm text-text-secondary">{subtitle}</p>
-        )}
-      </div>
+      <h1 className="sr-only">
+        {title}
+        {subtitle ? ` — ${subtitle}` : ""}
+      </h1>
       {action}
     </div>
   );

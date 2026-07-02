@@ -26,15 +26,15 @@ import { cn } from "@/lib/cn";
 import { formatDateLabel, todayISO } from "@/lib/format";
 
 const EVENT_TYPES: { label: string; value: CalendarEventType; dot: string }[] = [
-  { label: "Swim", value: "swim", dot: "bg-accent" },
-  { label: "Lift", value: "lift", dot: "bg-blue-400" },
-  { label: "Meal", value: "meal", dot: "bg-yellow-400" },
-  { label: "Sleep", value: "sleep", dot: "bg-purple-400" },
-  { label: "Meet", value: "meet", dot: "bg-red-400" },
+  { label: "Swim", value: "swim", dot: "var(--accent)" },
+  { label: "Lift", value: "lift", dot: "var(--warning)" },
+  { label: "Meal", value: "meal", dot: "var(--dot-meal)" },
+  { label: "Sleep", value: "sleep", dot: "var(--dot-sleep)" },
+  { label: "Meet", value: "meet", dot: "var(--danger)" },
 ];
 
-function dotClass(type: CalendarEventType) {
-  return EVENT_TYPES.find((t) => t.value === type)?.dot ?? "bg-text-tertiary";
+function dotColor(type: CalendarEventType) {
+  return EVENT_TYPES.find((t) => t.value === type)?.dot ?? "var(--text-tertiary)";
 }
 
 export default function CalendarPage() {
@@ -123,7 +123,8 @@ export default function CalendarPage() {
                   {dayEvents.slice(0, 3).map((ev) => (
                     <span
                       key={ev!.id}
-                      className={cn("h-1 w-1 rounded-full", dotClass(ev!.type))}
+                      className="h-1 w-1 rounded-full"
+                      style={{ backgroundColor: dotColor(ev!.type) }}
                     />
                   ))}
                 </div>
@@ -156,7 +157,10 @@ export default function CalendarPage() {
                   key={ev!.id}
                   className="flex items-center gap-2 rounded-lg border border-border p-2"
                 >
-                  <span className={cn("h-2 w-2 shrink-0 rounded-full", dotClass(ev!.type))} />
+                  <span
+                    className="h-2 w-2 shrink-0 rounded-full"
+                    style={{ backgroundColor: dotColor(ev!.type) }}
+                  />
                   <div className="flex-1">
                     <p className="text-sm text-text-primary">{ev!.title}</p>
                     {ev!.startTime && (

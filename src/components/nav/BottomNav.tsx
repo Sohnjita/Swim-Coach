@@ -18,10 +18,11 @@ export default function BottomNav() {
 
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-bg/90 backdrop-blur-md"
+      className="fixed inset-x-0 bottom-0 z-20"
       style={{ paddingBottom: "var(--safe-bottom)" }}
     >
-      <div className="mx-auto flex max-w-md items-stretch justify-around">
+      <div className="pool-edge-bottom" />
+      <div className="mx-auto flex h-16 max-w-md items-center">
         {items.map(({ href, label, icon: Icon }) => {
           const active =
             href === "/" ? pathname === "/" : pathname.startsWith(href);
@@ -29,20 +30,22 @@ export default function BottomNav() {
             <Link
               key={href}
               href={href}
-              className="flex flex-1 flex-col items-center justify-center gap-0.5 py-2"
+              aria-label={label}
+              className="flex flex-1 items-center justify-center"
             >
-              <Icon
-                size={22}
-                strokeWidth={active ? 2.25 : 1.75}
-                className={cn(active ? "text-accent" : "text-text-tertiary")}
-              />
               <span
                 className={cn(
-                  "text-[10px]",
-                  active ? "text-accent font-medium" : "text-text-tertiary",
+                  "flex items-center justify-center rounded-full transition-all duration-200",
+                  active
+                    ? "btn-primary h-12 w-12"
+                    : "h-9 w-9 border border-border-strong bg-bg-elevated-2/80",
                 )}
               >
-                {label}
+                <Icon
+                  size={active ? 22 : 17}
+                  strokeWidth={active ? 2.25 : 1.75}
+                  className={active ? "text-accent-text" : "text-text-tertiary"}
+                />
               </span>
             </Link>
           );

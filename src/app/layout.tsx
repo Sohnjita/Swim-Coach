@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import BottomNav from "@/components/nav/BottomNav";
 import DbBootstrap from "@/components/DbBootstrap";
+import PoolLanes from "@/components/PoolLanes";
 import { basePath } from "@/lib/basePath";
 import "./globals.css";
 
@@ -37,7 +38,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   viewportFit: "cover",
-  themeColor: "#0a1210",
+  themeColor: "#050d16",
 };
 
 export default function RootLayout({
@@ -52,7 +53,9 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col bg-bg text-text-primary">
         <DbBootstrap />
-        <div className="flex-1 pb-[calc(64px+var(--safe-bottom))]">
+        <PoolLanes />
+        <div className="pool-edge-top" />
+        <div className="relative z-[1] flex-1 pb-[calc(64px+var(--safe-bottom))]">
           {children}
         </div>
         <BottomNav />
