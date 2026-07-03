@@ -40,7 +40,7 @@ export default function AnalyzePage() {
     <div>
       <PageHeader title="Analyze" />
 
-      <div className="space-y-4 p-4">
+      <div className="divide-y divide-border/40 p-4 [&>*+*]:pt-6">
         <Card>
           <div className="mb-3 flex items-center justify-between">
             <CardTitle>Recent practice scores</CardTitle>
@@ -53,12 +53,12 @@ export default function AnalyzePage() {
               Log your first practice to start tracking your score.
             </p>
           ) : (
-            <ul className="space-y-3">
+            <ul className="divide-y divide-border/40">
               {recentScored.map(({ practice, practiceScore }) => (
                 <li key={practice.id}>
                   <Link
                     href={`/practices/detail?id=${practice.id}`}
-                    className="flex items-center gap-3"
+                    className="flex items-center gap-3 py-2"
                   >
                     <ScoreRing score={practiceScore} size={44} />
                     <div className="flex-1">

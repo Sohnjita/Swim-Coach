@@ -7,7 +7,7 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { ArrowLeft, Check, Copy, Pencil, Trash2 } from "lucide-react";
 import { db, SCORING_CONFIG_ID } from "@/lib/db";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { Card, CardTitle } from "@/components/ui/Card";
+import { CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { ScoreRing } from "@/components/ui/ScoreRing";
 import { Badge } from "@/components/ui/Badge";
@@ -99,10 +99,11 @@ function PracticeDetail() {
         }
       />
 
-      <div className="space-y-4 p-4">
+      <div className="p-4">
         <WrittenWorkout practice={practice} onUpdateLine={updateSetLine} />
 
-        <Card className="flex items-center gap-4">
+        <div className="mt-4 divide-y divide-border/40 border-t border-border/40 [&>*+*]:pt-5 [&>*]:pb-5">
+        <div className="flex items-center gap-4">
           <ScoreRing score={practiceScore} size={64} label="score" />
           <div>
             <p className="text-sm text-text-primary">Practice score</p>
@@ -110,7 +111,7 @@ function PracticeDetail() {
               Weighted across sets (sprint/lactate count more toward race prediction)
             </p>
           </div>
-        </Card>
+        </div>
 
         {practice.sets.filter(isSetLogged).map((set) => {
           const { repScores, setScore } = scoreSet(
@@ -120,7 +121,7 @@ function PracticeDetail() {
             scoringConfig,
           );
           return (
-            <Card key={set.id}>
+            <div key={set.id}>
               <div className="mb-2 flex items-center justify-between">
                 <div>
                   <CardTitle>{set.label || set.type}</CardTitle>
@@ -136,7 +137,7 @@ function PracticeDetail() {
                   return (
                     <div
                       key={rep.id}
-                      className="flex items-center justify-between border-t border-border py-1.5 text-sm first:border-0"
+                      className="flex items-center justify-between border-t border-border/40 py-1.5 text-sm first:border-0"
                     >
                       <span className="text-text-tertiary">#{rep.repIndex}</span>
                       <span className="text-text-primary">
@@ -154,11 +155,11 @@ function PracticeDetail() {
                   );
                 })}
               </div>
-            </Card>
+            </div>
           );
         })}
 
-        <Card>
+        <div>
           <CardTitle className="mb-2">Context</CardTitle>
           <dl className="grid grid-cols-2 gap-y-1 text-sm">
             <dt className="text-text-tertiary">Sleep</dt>
@@ -177,7 +178,8 @@ function PracticeDetail() {
           {practice.notes && (
             <p className="mt-2 text-sm text-text-secondary">{practice.notes}</p>
           )}
-        </Card>
+        </div>
+        </div>
       </div>
     </div>
   );

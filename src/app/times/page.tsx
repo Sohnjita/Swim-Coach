@@ -72,11 +72,11 @@ function TimesPageContent() {
       <div className="space-y-4 p-4">
         <Card>
           <CardTitle className="mb-3">Goal projection</CardTitle>
-          <div className="space-y-3">
+          <div className="divide-y divide-border/40">
             {predictions.map((pred) => {
               const pb = bestByEvent(pred.event);
               return (
-                <div key={pred.event} className="rounded-lg border border-border p-3">
+                <div key={pred.event} className="py-3 first:pt-0">
                   <p className="text-sm font-medium text-text-primary">{pred.event}</p>
                   <div className="mt-1 grid grid-cols-3 gap-2 text-center">
                     <div>
@@ -134,11 +134,11 @@ function TimesPageContent() {
           {(!results || results.length === 0) && !showResultForm ? (
             <p className="text-sm text-text-tertiary">No meet results logged yet.</p>
           ) : (
-            <ul className="space-y-2">
+            <ul className="divide-y divide-border/40">
               {results?.map((r) => (
                 <li
                   key={r.id}
-                  className="flex items-center justify-between rounded-lg border border-border p-2 text-sm"
+                  className="flex items-center justify-between py-2 text-sm"
                 >
                   <div>
                     <p className="text-text-primary">
@@ -176,11 +176,11 @@ function TimesPageContent() {
           {(!standards || standards.length === 0) && !showStandardForm ? (
             <p className="text-sm text-text-tertiary">No standards added yet.</p>
           ) : (
-            <ul className="space-y-2">
+            <ul className="divide-y divide-border/40">
               {standards?.map((s) => (
                 <li
                   key={s.id}
-                  className="flex items-center justify-between rounded-lg border border-border p-2 text-sm"
+                  className="flex items-center justify-between py-2 text-sm"
                 >
                   <div>
                     <p className="text-text-primary">

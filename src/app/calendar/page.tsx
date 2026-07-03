@@ -151,11 +151,11 @@ export default function CalendarPage() {
           {selectedEvents.length === 0 && !showNew ? (
             <p className="text-sm text-text-tertiary">Nothing planned.</p>
           ) : (
-            <ul className="space-y-2">
+            <ul className="divide-y divide-border/40">
               {selectedEvents.map((ev) => (
                 <li
                   key={ev!.id}
-                  className="flex items-center gap-2 rounded-lg border border-border p-2"
+                  className="flex items-center gap-2 py-2"
                 >
                   <span
                     className="h-2 w-2 shrink-0 rounded-full"

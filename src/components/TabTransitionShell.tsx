@@ -5,13 +5,13 @@ import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 
 const EMERGE_TRANSITION = {
-  duration: 0.5,
+  duration: 0.6,
   ease: [0.22, 0.61, 0.36, 1] as [number, number, number, number],
 };
 
 const variants = {
-  submerged: { opacity: 0.25, y: 28, filter: "blur(8px)" },
-  surfaced: { opacity: 1, y: 0, filter: "blur(0px)" },
+  submerged: { opacity: 0, y: 10, scale: 0.97, filter: "blur(14px)" },
+  surfaced: { opacity: 1, y: 0, scale: 1, filter: "blur(0px)" },
 };
 
 /**

@@ -86,12 +86,12 @@ export default function ImportPracticesPage() {
         </Card>
 
         {parsed.length > 0 && (
-          <div className="space-y-3">
+          <div className="divide-y divide-border/40 [&>*+*]:pt-5">
             <p className="px-1 text-xs font-medium text-text-tertiary">
               {parsed.length} practice{parsed.length > 1 ? "s" : ""} parsed
             </p>
             {parsed.map((practice) => (
-              <Card key={practice.id}>
+              <div key={practice.id}>
                 <div className="mb-2 flex items-center justify-between">
                   <CardTitle>{formatDateLabel(practice.date)}</CardTitle>
                   <Badge>{practice.course}</Badge>
@@ -114,7 +114,7 @@ export default function ImportPracticesPage() {
                     </div>
                   ))}
                 </div>
-              </Card>
+              </div>
             ))}
           </div>
         )}

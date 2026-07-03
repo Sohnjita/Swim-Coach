@@ -84,26 +84,25 @@ export default function SetsPage() {
         )}
 
         {!templates || templates.length === 0 ? (
-          <Card>
-            <p className="text-sm text-text-tertiary">
-              Save reusable sets here — e.g. &ldquo;8x100 Breast Descend&rdquo; — so
-              you can drop them into a practice and get pace/interval
-              suggestions based on your history.
-            </p>
-          </Card>
+          <p className="text-sm text-text-tertiary">
+            Save reusable sets here — e.g. &ldquo;8x100 Breast Descend&rdquo; — so
+            you can drop them into a practice and get pace/interval
+            suggestions based on your history.
+          </p>
         ) : (
-          templates.map((template) => {
+          <div className="divide-y divide-border/40">
+          {templates.map((template) => {
             const suggestion =
               suggestionFor === template.id
                 ? suggestSetVariation(template, history)
                 : null;
             return (
-              <Card key={template.id}>
+              <div key={template.id} className="py-3 first:pt-0">
                 <div className="mb-2 flex items-start justify-between">
                   <div>
-                    <CardTitle className="text-text-primary text-sm font-medium">
+                    <p className="text-sm font-medium text-text-primary">
                       {template.label}
-                    </CardTitle>
+                    </p>
                     <p className="text-xs text-text-tertiary">
                       {template.repCount}x{template.distance} {template.stroke} ·{" "}
                       {template.course}
@@ -155,9 +154,10 @@ export default function SetsPage() {
                     Start practice
                   </Button>
                 </div>
-              </Card>
+              </div>
             );
-          })
+          })}
+          </div>
         )}
       </div>
     </div>

@@ -50,7 +50,8 @@ function SettingsForm({
 
   return (
     <>
-      <div className="space-y-4 p-4 pb-24">
+      <div className="space-y-6 p-4 pb-24">
+        <div className="divide-y divide-border/40 [&>*+*]:pt-6">
         <Card>
           <CardTitle className="mb-3">Profile</CardTitle>
           <div className="space-y-3">
@@ -191,6 +192,7 @@ function SettingsForm({
             Reset to defaults
           </Button>
         </Card>
+        </div>
 
         <Button className="w-full" onClick={save}>
           {saved ? "Saved" : "Save settings"}

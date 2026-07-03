@@ -88,7 +88,7 @@ export function LineComposer({
   }
 
   return (
-    <div className="surface-card rounded-2xl border border-border p-3">
+    <div className="border-t border-border/60 pt-3">
       <div className="mb-2 flex items-center gap-2">
         <div className="flex items-center gap-1">
           <input

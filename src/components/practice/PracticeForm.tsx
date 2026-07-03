@@ -156,20 +156,20 @@ export function PracticeForm({
       </div>
 
       {showSetPicker && (
-        <Card>
+        <div className="border-t border-border/40 pt-3">
           <CardTitle className="mb-2">Insert a saved set</CardTitle>
           {!templates || templates.length === 0 ? (
             <p className="text-sm text-text-tertiary">
               No saved sets yet — save one from the Set Library first.
             </p>
           ) : (
-            <div className="space-y-2">
+            <div className="divide-y divide-border/40">
               {templates.map((t) => (
                 <button
                   key={t.id}
                   type="button"
                   onClick={() => insertTemplate(t)}
-                  className="flex w-full items-center justify-between rounded-lg border border-border bg-bg-elevated-2 p-2 text-left active:opacity-70"
+                  className="flex w-full items-center justify-between py-2 text-left active:opacity-70"
                 >
                   <div>
                     <p className="text-sm text-text-primary">{t.label}</p>
@@ -185,7 +185,7 @@ export function PracticeForm({
               ))}
             </div>
           )}
-        </Card>
+        </div>
       )}
 
       <Card>

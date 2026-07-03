@@ -5,7 +5,6 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { Plus, Layers, ChevronRight, Upload } from "lucide-react";
 import { db, SCORING_CONFIG_ID } from "@/lib/db";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { ScoreRing } from "@/components/ui/ScoreRing";
 import { buildRepHistory, DEFAULT_SCORING_CONFIG, scorePractice } from "@/lib/scoring";
@@ -46,22 +45,24 @@ export default function PracticesPage() {
           </div>
         }
       />
-      <div className="space-y-3 p-4">
+      <div className="p-4">
         {!practices || practices.length === 0 ? (
-          <Card>
-            <p className="text-sm text-text-tertiary">
-              No practices logged yet. Tap + to log your first one.
-            </p>
-          </Card>
+          <p className="text-sm text-text-tertiary">
+            No practices logged yet. Tap + to log your first one.
+          </p>
         ) : (
-          practices.map((practice) => {
-            const { practiceScore } =
-              scoringConfig
-                ? scorePractice(practice, history, scoringConfig)
-                : { practiceScore: null };
-            return (
-              <Link key={practice.id} href={`/practices/detail?id=${practice.id}`}>
-                <Card className="flex items-center gap-3">
+          <div className="divide-y divide-border/40">
+            {practices.map((practice) => {
+              const { practiceScore } =
+                scoringConfig
+                  ? scorePractice(practice, history, scoringConfig)
+                  : { practiceScore: null };
+              return (
+                <Link
+                  key={practice.id}
+                  href={`/practices/detail?id=${practice.id}`}
+                  className="flex items-center gap-3 py-3"
+                >
                   <ScoreRing score={practiceScore} size={48} />
                   <div className="flex-1">
                     <p className="text-sm font-medium text-text-primary">
@@ -73,10 +74,10 @@ export default function PracticesPage() {
                     </p>
                   </div>
                   <ChevronRight size={18} className="text-text-tertiary" />
-                </Card>
-              </Link>
-            );
-          })
+                </Link>
+              );
+            })}
+          </div>
         )}
       </div>
     </div>
