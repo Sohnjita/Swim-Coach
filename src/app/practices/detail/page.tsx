@@ -4,8 +4,18 @@ import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
-import { ArrowLeft, Check, ChevronDown, Copy, Plus, Trash2 } from "lucide-react";
-import { db, SCORING_CONFIG_ID } from "@/lib/db";
+import {
+  ArrowLeft,
+  Brackets,
+  Check,
+  ChevronDown,
+  Copy,
+  Pencil,
+  Plus,
+  Trash2,
+  Type as TypeIcon,
+} from "lucide-react";
+import { db, newId, SCORING_CONFIG_ID } from "@/lib/db";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -18,14 +28,24 @@ import { RepRow } from "@/components/practice/RepRow";
 import {
   appendItemToRound,
   formatLines,
+  makeRoundLine,
+  makeTextLine,
   removeLineById,
   syncRepsWithLines,
   updateLineById,
 } from "@/lib/lineTree";
 import { buildRepHistory, DEFAULT_SCORING_CONFIG, scorePractice, scoreSet } from "@/lib/scoring";
-import { emptyPracticeSet, practiceSummaryLine } from "@/lib/practiceHelpers";
+import { makeSetFromTemplate, practiceSummaryLine } from "@/lib/practiceHelpers";
 import { formatDateLabel } from "@/lib/format";
-import type { Course, Practice, PracticeLine, PracticeSet, Rep, SetType } from "@/lib/types";
+import type {
+  Course,
+  Practice,
+  PracticeLine,
+  PracticeSet,
+  Rep,
+  SetTemplate,
+  SetType,
+} from "@/lib/types";
 
 const SET_TYPES: SetType[] = ["aerobic", "threshold", "sprint", "lactate"];
 const COURSES: { label: string; value: Course }[] = [
@@ -44,13 +64,18 @@ export default function PracticeDetailPage() {
 }
 
 function PracticeDetail() {
-  const id = useSearchParams().get("id") ?? "";
+  const searchParams = useSearchParams();
+  const id = searchParams.get("id") ?? "";
   const router = useRouter();
   const [copied, setCopied] = useState(false);
   const [editingDate, setEditingDate] = useState(false);
+  // Freshly-created practices (routed here with ?new=1) open straight into
+  // edit mode so there's something to write; otherwise start in view mode.
+  const [editing, setEditing] = useState(searchParams.get("new") === "1");
 
   const practice = useLiveQuery(() => db.practices.get(id), [id]);
   const allPractices = useLiveQuery(() => db.practices.toArray(), []);
+  const templates = useLiveQuery(() => db.setTemplates.toArray(), []);
   const scoringConfig =
     useLiveQuery(() => db.scoringConfig.get(SCORING_CONFIG_ID), []) ??
     DEFAULT_SCORING_CONFIG;
@@ -145,11 +170,44 @@ function PracticeDetail() {
     save({ ...currentPractice, sets: currentPractice.sets.filter((s) => s.id !== setId) });
   }
 
-  function insertBlockAfter(index: number) {
-    const block = emptyPracticeSet();
+  function insertBlockAt(index: number, block: PracticeSet) {
     const sets = [...currentPractice.sets];
     sets.splice(index + 1, 0, block);
     save({ ...currentPractice, sets });
+  }
+
+  function insertTemplateAfter(index: number, template: SetTemplate) {
+    insertBlockAt(
+      index,
+      makeSetFromTemplate(
+        template.type,
+        template.label,
+        template.repCount,
+        template.distance,
+        template.stroke,
+        template.baseIntervalSeconds,
+      ),
+    );
+  }
+
+  function insertNoteAfter(index: number) {
+    insertBlockAt(index, {
+      id: newId(),
+      type: "aerobic",
+      label: "",
+      lines: [makeTextLine("New note")],
+      reps: [],
+    });
+  }
+
+  function insertRoundAfter(index: number) {
+    insertBlockAt(index, {
+      id: newId(),
+      type: "aerobic",
+      label: "",
+      lines: [makeRoundLine(2)],
+      reps: [],
+    });
   }
 
   return (
@@ -166,6 +224,14 @@ function PracticeDetail() {
         subtitle={`${practice.course} · ${practiceSummaryLine(practice)}`}
         action={
           <div className="flex gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setEditing((v) => !v)}
+              aria-label={editing ? "Done editing" : "Edit practice"}
+            >
+              {editing ? <Check size={18} /> : <Pencil size={18} />}
+            </Button>
             <Button variant="ghost" size="icon" onClick={handleCopy} aria-label="Copy written workout">
               {copied ? <Check size={18} /> : <Copy size={18} />}
             </Button>
@@ -221,6 +287,7 @@ function PracticeDetail() {
                 <BlockPanel
                   set={set}
                   setScore={setScore}
+                  editing={editing}
                   canRemove={practice.sets.length > 1}
                   onLabelChange={(label) => updateBlockLabel(set.id, label)}
                   onCycleType={() => cycleBlockType(set.id)}
@@ -231,7 +298,14 @@ function PracticeDetail() {
                   onUpdateRep={(repId, rep) => updateRep(set.id, repId, rep)}
                   repScores={repScores}
                 />
-                <AddBlockBar onAdd={() => insertBlockAfter(i)} />
+                {editing && (
+                  <AddSetBar
+                    templates={templates ?? []}
+                    onAddTemplate={(template) => insertTemplateAfter(i, template)}
+                    onAddNote={() => insertNoteAfter(i)}
+                    onAddRound={() => insertRoundAfter(i)}
+                  />
+                )}
               </div>
             );
           })}
@@ -296,6 +370,7 @@ function CourseField({
 function BlockPanel({
   set,
   setScore,
+  editing,
   canRemove,
   onLabelChange,
   onCycleType,
@@ -308,6 +383,7 @@ function BlockPanel({
 }: {
   set: PracticeSet;
   setScore: number | null;
+  editing: boolean;
   canRemove: boolean;
   onLabelChange: (label: string) => void;
   onCycleType: () => void;
@@ -324,7 +400,7 @@ function BlockPanel({
   return (
     <div>
       <div className="mb-2 flex items-center justify-between gap-2">
-        {editingLabel ? (
+        {editing && editingLabel ? (
           <input
             autoFocus
             value={labelDraft}
@@ -336,7 +412,7 @@ function BlockPanel({
             placeholder={set.type}
             className="h-7 min-w-0 flex-1 bg-transparent text-sm font-semibold text-text-primary outline-none placeholder:font-normal placeholder:text-text-tertiary"
           />
-        ) : (
+        ) : editing ? (
           <button
             type="button"
             onClick={() => {
@@ -347,15 +423,25 @@ function BlockPanel({
           >
             {set.label || set.type}
           </button>
+        ) : (
+          <p className="min-w-0 flex-1 truncate text-sm font-semibold capitalize text-text-primary">
+            {set.label || set.type}
+          </p>
         )}
         <div className="flex shrink-0 items-center gap-2">
-          <button type="button" onClick={onCycleType} className="active:opacity-70">
+          {editing ? (
+            <button type="button" onClick={onCycleType} className="active:opacity-70">
+              <Badge tone="neutral" className="capitalize">
+                {set.type}
+              </Badge>
+            </button>
+          ) : (
             <Badge tone="neutral" className="capitalize">
               {set.type}
             </Badge>
-          </button>
+          )}
           {setScore !== null && <ScoreRing score={setScore} size={32} />}
-          {canRemove && (
+          {editing && canRemove && (
             <button type="button" onClick={onRemove} className="p-1 text-text-tertiary active:opacity-70">
               <Trash2 size={14} />
             </button>
@@ -365,9 +451,9 @@ function BlockPanel({
 
       <NotationDocument
         lines={set.lines}
-        onUpdateLine={onUpdateLine}
-        onDeleteLine={onDeleteLine}
-        onAddLine={onAddLine}
+        onUpdateLine={editing ? onUpdateLine : undefined}
+        onDeleteLine={editing ? onDeleteLine : undefined}
+        onAddLine={editing ? onAddLine : undefined}
       />
 
       {set.reps.length > 0 && (
@@ -386,15 +472,77 @@ function BlockPanel({
   );
 }
 
-function AddBlockBar({ onAdd }: { onAdd: () => void }) {
+function AddSetBar({
+  templates,
+  onAddTemplate,
+  onAddNote,
+  onAddRound,
+}: {
+  templates: SetTemplate[];
+  onAddTemplate: (template: SetTemplate) => void;
+  onAddNote: () => void;
+  onAddRound: () => void;
+}) {
+  const [showPicker, setShowPicker] = useState(false);
+
   return (
-    <button
-      type="button"
-      onClick={onAdd}
-      className="my-3 flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-border py-2 text-xs text-text-tertiary active:opacity-70"
-    >
-      <Plus size={13} /> Add block
-    </button>
+    <div className="my-3">
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={() => setShowPicker((v) => !v)}
+          className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-dashed border-border py-2 text-xs text-text-tertiary active:opacity-70"
+        >
+          <Plus size={13} /> Add set
+        </button>
+        <button
+          type="button"
+          onClick={onAddNote}
+          className="flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-border px-3 py-2 text-xs text-text-tertiary active:opacity-70"
+        >
+          <TypeIcon size={13} /> Note
+        </button>
+        <button
+          type="button"
+          onClick={onAddRound}
+          className="flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-border px-3 py-2 text-xs text-text-tertiary active:opacity-70"
+        >
+          <Brackets size={13} /> Round
+        </button>
+      </div>
+
+      {showPicker && (
+        <div className="mt-1 divide-y divide-border/40 rounded-lg border border-border bg-bg-elevated-2">
+          {templates.length === 0 ? (
+            <p className="p-2 text-xs text-text-tertiary">
+              No saved sets yet — save one from the Set Library first.
+            </p>
+          ) : (
+            templates.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => {
+                  onAddTemplate(t);
+                  setShowPicker(false);
+                }}
+                className="flex w-full items-center justify-between px-2 py-2 text-left active:opacity-70"
+              >
+                <div>
+                  <p className="text-sm text-text-primary">{t.label}</p>
+                  <p className="text-xs text-text-tertiary">
+                    {t.repCount}x{t.distance} {t.stroke}
+                  </p>
+                </div>
+                <Badge tone="neutral" className="capitalize">
+                  {t.type}
+                </Badge>
+              </button>
+            ))
+          )}
+        </div>
+      )}
+    </div>
   );
 }
 

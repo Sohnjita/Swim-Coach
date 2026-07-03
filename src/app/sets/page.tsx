@@ -67,7 +67,7 @@ export default function SetsPage() {
     );
     const practice = newPractice(todayISO(), template.course, set);
     await db.practices.put(practice);
-    router.push(`/practices/detail?id=${practice.id}`);
+    router.push(`/practices/detail?id=${practice.id}&new=1`);
   }
 
   return (

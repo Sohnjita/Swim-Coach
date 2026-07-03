@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Brackets, Check, Plus, Type, X } from "lucide-react";
+import { Check, Plus, X } from "lucide-react";
 import type { LineModifier, PracticeLine, RepGroupLine, RoundLine, Stroke, TextLine } from "@/lib/types";
-import { formatLine, makeRepGroupLine, makeRoundLine, makeTextLine } from "@/lib/lineTree";
+import { formatLine, makeRepGroupLine } from "@/lib/lineTree";
 import { formatInterval, parseInterval } from "@/lib/conversions";
 import { cn } from "@/lib/cn";
 
@@ -95,35 +95,29 @@ export function NotationDocument({
             {row.kind === "round-close" && onAddLine && (
               <AddLineRow
                 depth={row.depth + 1}
-                allowRound={false}
                 onAdd={(line) => onAddLine(line, row.id)}
               />
             )}
           </div>
         );
       })}
-      {onAddLine && <AddLineRow depth={0} allowRound onAdd={(line) => onAddLine(line)} />}
+      {onAddLine && <AddLineRow depth={0} onAdd={(line) => onAddLine(line)} />}
     </div>
   );
 }
 
-/** Inline "+" bar: tap to pick a line kind, then edit it in place before it's added. */
+/** Inline "+" under the last line: adds another line item in place, same as before. */
 function AddLineRow({
   depth,
-  allowRound,
   onAdd,
 }: {
   depth: number;
-  allowRound: boolean;
   onAdd: (line: PracticeLine) => void;
 }) {
-  const [draft, setDraft] = useState<PracticeLine | null>(null);
+  const [draft, setDraft] = useState<RepGroupLine | null>(null);
 
   if (draft) {
-    const row: Row =
-      draft.kind === "round"
-        ? { id: draft.id, depth, kind: "round-open", line: draft, text: "" }
-        : { id: draft.id, depth, kind: draft.kind, line: draft, text: "" };
+    const row: Row = { id: draft.id, depth, kind: "reps", line: draft, text: "" };
     return (
       <div style={{ paddingLeft: depth * 16 }}>
         <LineRowEditor
@@ -139,30 +133,15 @@ function AddLineRow({
   }
 
   return (
-    <div style={{ paddingLeft: depth * 16 }} className="flex items-center gap-1.5 py-1">
+    <div style={{ paddingLeft: depth * 16 }} className="py-1">
       <button
         type="button"
         onClick={() => setDraft(makeRepGroupLine({}))}
-        className="flex items-center gap-1 rounded-lg border border-dashed border-border px-2 py-1 text-xs text-text-tertiary active:opacity-70"
+        aria-label="Add line"
+        className="rounded-lg border border-dashed border-border p-1 text-text-tertiary active:opacity-70"
       >
-        <Plus size={12} /> Set
+        <Plus size={12} />
       </button>
-      <button
-        type="button"
-        onClick={() => setDraft(makeTextLine(""))}
-        className="flex items-center gap-1 rounded-lg border border-dashed border-border px-2 py-1 text-xs text-text-tertiary active:opacity-70"
-      >
-        <Type size={12} /> Note
-      </button>
-      {allowRound && (
-        <button
-          type="button"
-          onClick={() => setDraft(makeRoundLine(2))}
-          className="flex items-center gap-1 rounded-lg border border-dashed border-border px-2 py-1 text-xs text-text-tertiary active:opacity-70"
-        >
-          <Brackets size={12} /> Round
-        </button>
-      )}
     </div>
   );
 }

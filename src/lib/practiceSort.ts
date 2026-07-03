@@ -25,26 +25,22 @@ const TYPE_RANK: Record<EnergyFocus, number> = {
   other: 4,
 };
 
-/** Adds/toggles/removes a sort key on tap: unselected -> desc -> asc -> removed. */
-export function toggleSortSpec(specs: SortSpec[], key: SortKey): SortSpec[] {
-  const idx = specs.findIndex((s) => s.key === key);
-  if (idx === -1) return [...specs, { key, dir: "desc" }];
-  if (specs[idx].dir === "desc") {
-    const next = [...specs];
-    next[idx] = { key, dir: "asc" };
-    return next;
-  }
-  return specs.filter((s) => s.key !== key);
+/** Single active sort key: tapping a new key replaces it; tapping the active key flips
+ * direction, and flips again back off (null) rather than stacking multiple keys. */
+export function toggleSort(current: SortSpec | null, key: SortKey): SortSpec | null {
+  if (!current || current.key !== key) return { key, dir: "desc" };
+  if (current.dir === "desc") return { key, dir: "asc" };
+  return null;
 }
 
-/** Sorts practices by the given specs in click order (first clicked = primary key). */
+/** Sorts practices by a single spec (or leaves them in place if none is active). */
 export function sortPractices(
   practices: Practice[],
-  specs: SortSpec[],
+  spec: SortSpec | null,
   history: RepHistoryEntry[],
   config: ScoringConfig,
 ): Practice[] {
-  if (specs.length === 0) return practices;
+  if (!spec) return practices;
 
   const scoreById = new Map<string, number>();
   const distanceById = new Map<string, number>();
@@ -63,10 +59,7 @@ export function sortPractices(
   }
 
   return [...practices].sort((a, b) => {
-    for (const spec of specs) {
-      const diff = valueFor(a, spec.key) - valueFor(b, spec.key);
-      if (diff !== 0) return spec.dir === "asc" ? diff : -diff;
-    }
-    return 0;
+    const diff = valueFor(a, spec.key) - valueFor(b, spec.key);
+    return spec.dir === "asc" ? diff : -diff;
   });
 }

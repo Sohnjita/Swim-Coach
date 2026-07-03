@@ -68,7 +68,7 @@ export function HomeCalendar() {
   async function logPractice() {
     const practice = newPractice(selected);
     await db.practices.put(practice);
-    router.push(`/practices/detail?id=${practice.id}`);
+    router.push(`/practices/detail?id=${practice.id}&new=1`);
   }
 
   function logMeet() {

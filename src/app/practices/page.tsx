@@ -16,7 +16,7 @@ import { cn } from "@/lib/cn";
 import {
   SORT_LABEL,
   sortPractices,
-  toggleSortSpec,
+  toggleSort,
   type SortKey,
   type SortSpec,
 } from "@/lib/practiceSort";
@@ -32,17 +32,17 @@ export default function PracticesPage() {
   const scoringConfig =
     useLiveQuery(() => db.scoringConfig.get(SCORING_CONFIG_ID), []) ??
     DEFAULT_SCORING_CONFIG;
-  const [sortSpecs, setSortSpecs] = useState<SortSpec[]>([]);
+  const [sortSpec, setSortSpec] = useState<SortSpec | null>(null);
 
   const history = practices ? buildRepHistory(practices, scoringConfig) : [];
   const sorted = practices
-    ? sortPractices(practices, sortSpecs, history, scoringConfig)
+    ? sortPractices(practices, sortSpec, history, scoringConfig)
     : [];
 
   async function handleNewPractice() {
     const practice = newPractice(todayISO());
     await db.practices.put(practice);
-    router.push(`/practices/detail?id=${practice.id}`);
+    router.push(`/practices/detail?id=${practice.id}&new=1`);
   }
 
   return (
@@ -79,29 +79,30 @@ export default function PracticesPage() {
           </p>
         ) : (
           <>
-            <div className="mb-3 flex flex-wrap items-center gap-1.5">
-              <span className="text-xs text-text-tertiary">Sort</span>
+            <div className="mb-3 flex flex-wrap items-center gap-3">
               {SORT_KEYS.map((key) => {
-                const spec = sortSpecs.find((s) => s.key === key);
-                const order = spec ? sortSpecs.indexOf(spec) + 1 : null;
+                const active = sortSpec?.key === key;
+                // Date is special-cased: "up" always means toward closer
+                // (more recent) dates, "down" toward further-past dates —
+                // the opposite of the generic desc/asc arrow below, since
+                // desc-by-date (newest first) is what reads as "closer".
+                const showUp = active
+                  ? key === "date"
+                    ? sortSpec!.dir === "desc"
+                    : sortSpec!.dir === "asc"
+                  : false;
                 return (
                   <button
                     key={key}
                     type="button"
-                    onClick={() => setSortSpecs((prev) => toggleSortSpec(prev, key))}
+                    onClick={() => setSortSpec((prev) => toggleSort(prev, key))}
                     className={cn(
-                      "flex items-center gap-1 rounded-full px-2.5 py-1 text-xs whitespace-nowrap transition-colors",
-                      spec
-                        ? "bg-accent text-accent-text font-medium"
-                        : "bg-bg-elevated-2 text-text-secondary border border-border",
+                      "flex items-center gap-1 text-xs whitespace-nowrap",
+                      active ? "font-medium text-accent" : "text-text-tertiary",
                     )}
                   >
-                    {sortSpecs.length > 1 && order && (
-                      <span className="text-[10px] opacity-80">{order}</span>
-                    )}
                     {SORT_LABEL[key]}
-                    {spec &&
-                      (spec.dir === "asc" ? <ArrowUp size={11} /> : <ArrowDown size={11} />)}
+                    {active && (showUp ? <ArrowUp size={11} /> : <ArrowDown size={11} />)}
                   </button>
                 );
               })}
