@@ -13,7 +13,7 @@ export default function PoolLanes() {
       {Array.from({ length: LANE_COUNT - 1 }).map((_, i) => (
         <div
           key={i}
-          className="lane-buoys absolute top-0 h-full -translate-x-1/2"
+          className="lane-line absolute top-0 h-full -translate-x-1/2"
           style={{ left: `${((i + 1) / LANE_COUNT) * 100}%` }}
         />
       ))}

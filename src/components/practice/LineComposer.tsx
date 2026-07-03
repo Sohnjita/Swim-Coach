@@ -26,6 +26,12 @@ const MODIFIERS: { label: string; value: LineModifier }[] = [
   { label: "Pull", value: "pull" },
 ];
 
+const DESCRIPTORS = ["Build", "Descend", "Race", "Easy", "Best avg"] as const;
+
+function descriptorTag(label: (typeof DESCRIPTORS)[number], count: number): string {
+  return label === "Descend" ? `descend 1-${count}` : label.toLowerCase();
+}
+
 function Chip({
   active,
   onClick,
@@ -142,12 +148,28 @@ export function LineComposer({
         ))}
       </div>
 
-      <div className="mb-3 flex gap-1 overflow-x-auto">
+      <div className="mb-2 flex gap-1 overflow-x-auto">
         {MODIFIERS.map((m) => (
           <Chip key={m.value} active={modifier === m.value} onClick={() => setModifier(m.value)}>
             {m.label}
           </Chip>
         ))}
+      </div>
+
+      <div className="mb-3 flex gap-1 overflow-x-auto">
+        {DESCRIPTORS.map((label) => {
+          const value = descriptorTag(label, count);
+          const active = label === "Descend" ? tag.startsWith("descend 1-") : tag === value;
+          return (
+            <Chip
+              key={label}
+              active={active}
+              onClick={() => setTag(active ? "" : value)}
+            >
+              {label}
+            </Chip>
+          );
+        })}
       </div>
 
       {showTextInput && (

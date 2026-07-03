@@ -9,8 +9,8 @@
   --border-strong: #2b4560;
 
   --text-primary: #eef4fa;
-  --text-secondary: #93a8bd;
-  --text-tertiary: #5e7189;
+  --text-secondary: #b0c2d6;
+  --text-tertiary: #8598ac;
 
   --accent: #4a7aa8;
   --accent-strong: #325b7e;
@@ -116,19 +116,11 @@ body {
   filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.85)) drop-shadow(0 0 2px rgba(255, 255, 255, 0.6));
 }
 
-/* Lane-line "buoys": periodic tick marks down each background lane line. */
-.lane-buoys {
-  width: 2px;
+/* Background lane divider: a clean, continuous line (no tick/buoy marks). */
+.lane-line {
+  width: 1px;
   height: 100%;
-  background-image:
-    repeating-linear-gradient(
-      180deg,
-      rgba(180, 210, 235, 0.28) 0px,
-      rgba(180, 210, 235, 0.28) 5px,
-      transparent 5px,
-      transparent 44px
-    ),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.05));
+  background-color: rgba(180, 210, 235, 0.14);
 }
 
 * {
