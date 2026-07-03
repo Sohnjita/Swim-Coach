@@ -1,4 +1,4 @@
-import type { SetTemplate } from "./types";
+import type { Course, Stroke } from "./types";
 import { repComparisonKey, type RepHistoryEntry } from "./scoring";
 import { formatTime } from "./conversions";
 
@@ -11,18 +11,26 @@ export interface SetVariationSuggestion {
   rationale: string;
 }
 
+/** The single rep shape a variation suggestion is computed against. */
+export interface RepShape {
+  distance: number;
+  stroke: Stroke;
+  course: Course;
+  baseIntervalSeconds: number | null;
+}
+
 /**
- * Suggests an interval/target-pace variation for a saved set template by
- * comparing your most recent reps at that same distance/stroke/course shape
- * against the reps before them. This is a simple recency-trend heuristic,
- * not a physiological model — treat the rationale as a prompt to adjust,
- * not a guarantee.
+ * Suggests an interval/target-pace variation for one rep shape (typically a
+ * saved template's first written line) by comparing your most recent reps at
+ * that same distance/stroke/course against the reps before them. This is a
+ * simple recency-trend heuristic, not a physiological model — treat the
+ * rationale as a prompt to adjust, not a guarantee.
  */
 export function suggestSetVariation(
-  template: SetTemplate,
+  shape: RepShape,
   history: RepHistoryEntry[],
 ): SetVariationSuggestion {
-  const key = repComparisonKey(template.distance, template.stroke, template.course);
+  const key = repComparisonKey(shape.distance, shape.stroke, shape.course);
   const matches = history
     .filter((h) => h.key === key)
     .sort((a, b) => a.date.localeCompare(b.date));
@@ -30,11 +38,11 @@ export function suggestSetVariation(
   if (matches.length < 4) {
     return {
       trend: "insufficient-data",
-      suggestedIntervalSeconds: template.baseIntervalSeconds,
+      suggestedIntervalSeconds: shape.baseIntervalSeconds,
       suggestedTargetSeconds: matches.length
         ? Math.min(...matches.map((m) => m.normalizedTime))
         : null,
-      rationale: `Log a few more ${template.distance} ${template.stroke} reps at this shape before I can suggest a variation — need at least 4, have ${matches.length}.`,
+      rationale: `Log a few more ${shape.distance} ${shape.stroke} reps at this shape before I can suggest a variation — need at least 4, have ${matches.length}.`,
     };
   }
 
@@ -47,7 +55,7 @@ export function suggestSetVariation(
   const priorAvg = prior.length ? avg(prior.map((m) => m.normalizedTime)) : recentAvg;
   const pctChange = ((recentAvg - priorAvg) / priorAvg) * 100;
   const bestRecent = Math.min(...recent.map((m) => m.normalizedTime));
-  const baseInterval = template.baseIntervalSeconds;
+  const baseInterval = shape.baseIntervalSeconds;
 
   if (pctChange < -0.5) {
     const interval = baseInterval ? Math.round(baseInterval * 0.98) : null;

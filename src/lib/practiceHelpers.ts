@@ -1,6 +1,6 @@
 import { newId } from "./db";
-import { expandLinesToReps, makeRepGroupLine, totalDistance } from "./lineTree";
-import type { Course, Practice, PracticeSet, SetType, Stroke } from "./types";
+import { cloneLinesWithFreshIds, totalDistance } from "./lineTree";
+import type { Course, Practice, PracticeSet, SetTemplate, SetType } from "./types";
 
 export type EnergyFocus = SetType | "other";
 
@@ -68,22 +68,24 @@ export function newPractice(date: string, course: Course = "SCY", initialSet?: P
   };
 }
 
-export function makeSetFromTemplate(
-  type: SetType,
-  label: string,
-  count: number,
-  distance: number,
-  stroke: Stroke,
-  interval: number | null,
-): PracticeSet {
-  const lines = [
-    makeRepGroupLine({ count, distance, stroke, intervalSeconds: interval, modifier: "swim" }),
-  ];
+export function emptySetTemplate(): SetTemplate {
   return {
     id: newId(),
-    type,
-    label,
-    lines,
-    reps: expandLinesToReps(lines, "push", "practice"),
+    type: "aerobic",
+    label: "",
+    course: "SCY",
+    lines: [],
+    createdAt: new Date().toISOString(),
+  };
+}
+
+/** Instantiates a saved template as a fresh block, ready to drop into a practice. */
+export function makeSetFromTemplate(template: SetTemplate): PracticeSet {
+  return {
+    id: newId(),
+    type: template.type,
+    label: template.label,
+    lines: cloneLinesWithFreshIds(template.lines),
+    reps: [],
   };
 }

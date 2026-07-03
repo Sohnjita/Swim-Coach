@@ -162,6 +162,13 @@ const MODIFIERS: { label: string; value: LineModifier }[] = [
   { label: "Pull", value: "pull" },
 ];
 
+const DESCRIPTORS = ["Build", "Descend", "Race", "Best avg", "Easy"] as const;
+
+/** "Descend" carries the current rep count, e.g. "descend 1-4". */
+function descriptorTag(label: (typeof DESCRIPTORS)[number], count: number): string {
+  return label === "Descend" ? `descend 1-${count}` : label.toLowerCase();
+}
+
 function EditorChip({
   active,
   onClick,
@@ -325,12 +332,23 @@ function RepLineEditor({
           </EditorChip>
         ))}
       </div>
-      <div className="flex flex-wrap items-center gap-1">
+      <div className="flex flex-wrap gap-1">
         {MODIFIERS.map((m) => (
           <EditorChip key={m.value} active={modifier === m.value} onClick={() => setModifier(m.value)}>
             {m.label}
           </EditorChip>
         ))}
+      </div>
+      <div className="flex flex-wrap items-center gap-1">
+        {DESCRIPTORS.map((label) => {
+          const value = descriptorTag(label, count);
+          const active = label === "Descend" ? tag.startsWith("descend 1-") : tag === value;
+          return (
+            <EditorChip key={label} active={active} onClick={() => setTag(active ? "" : value)}>
+              {label}
+            </EditorChip>
+          );
+        })}
         <div className="flex-1" />
         <EditorActions
           onSave={() =>

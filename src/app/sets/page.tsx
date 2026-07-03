@@ -1,44 +1,20 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
-import { Plus, Sparkles, Trash2 } from "lucide-react";
-import { db, SCORING_CONFIG_ID, newId } from "@/lib/db";
-import type { Course, SetTemplate, SetType, Stroke } from "@/lib/types";
+import { ChevronRight, Plus, Sparkles } from "lucide-react";
+import { db, SCORING_CONFIG_ID } from "@/lib/db";
+import type { SetTemplate } from "@/lib/types";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { Card, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
-import { Segmented } from "@/components/ui/Segmented";
-import { Field, Input, Select } from "@/components/ui/Field";
+import { countReps, findFirstRepsLine, totalDistance } from "@/lib/lineTree";
 import { buildRepHistory, DEFAULT_SCORING_CONFIG } from "@/lib/scoring";
 import { suggestSetVariation } from "@/lib/variations";
-import { makeSetFromTemplate, newPractice } from "@/lib/practiceHelpers";
+import { emptySetTemplate, makeSetFromTemplate, newPractice } from "@/lib/practiceHelpers";
 import { todayISO } from "@/lib/format";
-
-const SET_TYPES: { label: string; value: SetType }[] = [
-  { label: "Aerobic", value: "aerobic" },
-  { label: "Threshold", value: "threshold" },
-  { label: "Sprint", value: "sprint" },
-  { label: "Lactate", value: "lactate" },
-];
-
-const STROKES: { label: string; value: Stroke }[] = [
-  { label: "Free", value: "free" },
-  { label: "Back", value: "back" },
-  { label: "Breast", value: "breast" },
-  { label: "Fly", value: "fly" },
-  { label: "IM", value: "im" },
-  { label: "Kick", value: "kick" },
-  { label: "Drill", value: "drill" },
-];
-
-const COURSES: { label: string; value: Course }[] = [
-  { label: "SCY", value: "SCY" },
-  { label: "SCM", value: "SCM" },
-  { label: "LCM", value: "LCM" },
-];
 
 export default function SetsPage() {
   const router = useRouter();
@@ -47,24 +23,18 @@ export default function SetsPage() {
   const scoringConfig =
     useLiveQuery(() => db.scoringConfig.get(SCORING_CONFIG_ID), []) ??
     DEFAULT_SCORING_CONFIG;
-  const [showNew, setShowNew] = useState(false);
   const [suggestionFor, setSuggestionFor] = useState<string | null>(null);
 
   const history = practices ? buildRepHistory(practices, scoringConfig) : [];
 
-  async function deleteTemplate(id: string) {
-    await db.setTemplates.delete(id);
+  async function handleNewTemplate() {
+    const template = emptySetTemplate();
+    await db.setTemplates.put(template);
+    router.push(`/sets/detail?id=${template.id}&new=1`);
   }
 
-  async function startPractice(template: SetTemplate, targetInterval: number | null) {
-    const set = makeSetFromTemplate(
-      template.type,
-      template.label,
-      template.repCount,
-      template.distance,
-      template.stroke,
-      targetInterval ?? template.baseIntervalSeconds,
-    );
+  async function startPractice(template: SetTemplate) {
+    const set = makeSetFromTemplate(template);
     const practice = newPractice(todayISO(), template.course, set);
     await db.practices.put(practice);
     router.push(`/practices/detail?id=${practice.id}&new=1`);
@@ -75,179 +45,90 @@ export default function SetsPage() {
       <PageHeader
         title="Set Library"
         action={
-          <Button variant="ghost" size="icon" onClick={() => setShowNew((v) => !v)}>
+          <Button variant="ghost" size="icon" aria-label="New set" onClick={handleNewTemplate}>
             <Plus size={20} />
           </Button>
         }
       />
       <div className="space-y-3 p-4">
-        {showNew && (
-          <NewTemplateForm onDone={() => setShowNew(false)} />
-        )}
-
         {!templates || templates.length === 0 ? (
           <p className="text-sm text-text-tertiary">
             Save reusable sets here — e.g. &ldquo;8x100 Breast Descend&rdquo; — so
-            you can drop them into a practice and get pace/interval
-            suggestions based on your history.
+            you can write them once, get pace suggestions based on your
+            history, and drop them into any practice.
           </p>
         ) : (
           <div className="divide-y divide-border/40">
-          {templates.map((template) => {
-            const suggestion =
-              suggestionFor === template.id
-                ? suggestSetVariation(template, history)
-                : null;
-            return (
-              <div key={template.id} className="py-3 first:pt-0">
-                <div className="mb-2 flex items-start justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-text-primary">
-                      {template.label}
-                    </p>
-                    <p className="text-xs text-text-tertiary">
-                      {template.repCount}x{template.distance} {template.stroke} ·{" "}
-                      {template.course}
-                      {template.baseIntervalSeconds
-                        ? ` · :${template.baseIntervalSeconds}`
-                        : ""}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge tone="neutral" className="capitalize">
-                      {template.type}
-                    </Badge>
-                    <button
-                      onClick={() => deleteTemplate(template.id)}
-                      className="p-1 text-text-tertiary"
+            {templates.map((template) => {
+              const repShape = findFirstRepsLine(template.lines);
+              const suggestion =
+                suggestionFor === template.id && repShape
+                  ? suggestSetVariation(
+                      {
+                        distance: repShape.distance,
+                        stroke: repShape.stroke ?? "free",
+                        course: template.course,
+                        baseIntervalSeconds: repShape.intervalSeconds,
+                      },
+                      history,
+                    )
+                  : null;
+              return (
+                <div key={template.id} className="py-3 first:pt-0">
+                  <Link
+                    href={`/sets/detail?id=${template.id}`}
+                    className="mb-2 flex items-start justify-between gap-2"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-text-primary">
+                        {template.label || template.type}
+                      </p>
+                      <p className="text-xs text-text-tertiary">
+                        {countReps(template.lines)} reps · {totalDistance(template.lines)}{" "}
+                        {template.course === "SCY" ? "yd" : "m"} · {template.course}
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <Badge tone="neutral" className="capitalize">
+                        {template.type}
+                      </Badge>
+                      <ChevronRight size={16} className="text-text-tertiary" />
+                    </div>
+                  </Link>
+
+                  {suggestion && (
+                    <div className="mb-2 rounded-lg bg-accent-dim/40 p-2 text-xs text-text-secondary">
+                      {suggestion.rationale}
+                    </div>
+                  )}
+
+                  <div className="flex gap-2">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      className="flex-1"
+                      disabled={!repShape}
+                      onClick={() =>
+                        setSuggestionFor((cur) => (cur === template.id ? null : template.id))
+                      }
                     >
-                      <Trash2 size={15} />
-                    </button>
+                      <Sparkles size={14} /> Suggest
+                    </Button>
+                    <Button
+                      size="sm"
+                      className="flex-1"
+                      disabled={template.lines.length === 0}
+                      onClick={() => startPractice(template)}
+                    >
+                      Start practice
+                    </Button>
                   </div>
                 </div>
-
-                {suggestion && (
-                  <div className="mb-2 rounded-lg bg-accent-dim/40 p-2 text-xs text-text-secondary">
-                    {suggestion.rationale}
-                  </div>
-                )}
-
-                <div className="flex gap-2">
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    className="flex-1"
-                    onClick={() =>
-                      setSuggestionFor((cur) => (cur === template.id ? null : template.id))
-                    }
-                  >
-                    <Sparkles size={14} /> Suggest
-                  </Button>
-                  <Button
-                    size="sm"
-                    className="flex-1"
-                    onClick={() =>
-                      startPractice(
-                        template,
-                        suggestion?.suggestedIntervalSeconds ?? null,
-                      )
-                    }
-                  >
-                    Start practice
-                  </Button>
-                </div>
-              </div>
-            );
-          })}
+              );
+            })}
           </div>
         )}
       </div>
     </div>
-  );
-}
-
-function NewTemplateForm({ onDone }: { onDone: () => void }) {
-  const [type, setType] = useState<SetType>("aerobic");
-  const [label, setLabel] = useState("");
-  const [course, setCourse] = useState<Course>("SCY");
-  const [stroke, setStroke] = useState<Stroke>("breast");
-  const [repCount, setRepCount] = useState("8");
-  const [distance, setDistance] = useState("100");
-  const [interval, setInterval] = useState("90");
-
-  async function save() {
-    if (!label.trim()) return;
-    const template: SetTemplate = {
-      id: newId(),
-      type,
-      label: label.trim(),
-      course,
-      stroke,
-      repCount: Number(repCount) || 1,
-      distance: Number(distance) || 0,
-      baseIntervalSeconds: interval === "" ? null : Number(interval),
-      createdAt: new Date().toISOString(),
-    };
-    await db.setTemplates.put(template);
-    onDone();
-  }
-
-  return (
-    <Card>
-      <CardTitle className="mb-3">New set template</CardTitle>
-      <div className="space-y-3">
-        <Segmented options={SET_TYPES} value={type} onChange={setType} />
-        <Input
-          placeholder="Label (e.g. 8x100 Breast Descend)"
-          value={label}
-          onChange={(e) => setLabel(e.target.value)}
-        />
-        <div className="grid grid-cols-3 gap-2">
-          <Field label="Reps">
-            <Input
-              inputMode="numeric"
-              value={repCount}
-              onChange={(e) => setRepCount(e.target.value)}
-            />
-          </Field>
-          <Field label="Distance">
-            <Input
-              inputMode="numeric"
-              value={distance}
-              onChange={(e) => setDistance(e.target.value)}
-            />
-          </Field>
-          <Field label="Interval (sec)">
-            <Input
-              inputMode="numeric"
-              value={interval}
-              onChange={(e) => setInterval(e.target.value)}
-            />
-          </Field>
-        </div>
-        <div className="grid grid-cols-2 gap-2">
-          <Field label="Stroke">
-            <Select value={stroke} onChange={(e) => setStroke(e.target.value as Stroke)}>
-              {STROKES.map((s) => (
-                <option key={s.value} value={s.value}>
-                  {s.label}
-                </option>
-              ))}
-            </Select>
-          </Field>
-          <Field label="Course">
-            <Segmented options={COURSES} value={course} onChange={setCourse} />
-          </Field>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="secondary" className="flex-1" onClick={onDone}>
-            Cancel
-          </Button>
-          <Button className="flex-1" onClick={save}>
-            Save
-          </Button>
-        </div>
-      </div>
-    </Card>
   );
 }

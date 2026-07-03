@@ -27,11 +27,12 @@ import { NotationDocument } from "@/components/practice/NotationDocument";
 import { RepRow } from "@/components/practice/RepRow";
 import {
   appendItemToRound,
+  countReps,
   formatLines,
   makeRoundLine,
   makeTextLine,
   removeLineById,
-  syncRepsWithLines,
+  totalDistance,
   updateLineById,
 } from "@/lib/lineTree";
 import { buildRepHistory, DEFAULT_SCORING_CONFIG, scorePractice, scoreSet } from "@/lib/scoring";
@@ -43,6 +44,7 @@ import type {
   PracticeLine,
   PracticeSet,
   Rep,
+  RepGroupLine,
   SetTemplate,
   SetType,
 } from "@/lib/types";
@@ -58,20 +60,32 @@ const COURSES: { label: string; value: Course }[] = [
 export default function PracticeDetailPage() {
   return (
     <Suspense fallback={null}>
-      <PracticeDetail />
+      <PracticeDetailRouter />
     </Suspense>
   );
 }
 
-function PracticeDetail() {
+/**
+ * /practices/detail is a single route with the practice id in the query
+ * string, so navigating from one practice to another would otherwise
+ * re-render the same PracticeDetail instance instead of remounting it.
+ * Keying by id forces a fresh mount (and fresh useState defaults, notably
+ * `editing`) every time the id changes.
+ */
+function PracticeDetailRouter() {
   const searchParams = useSearchParams();
   const id = searchParams.get("id") ?? "";
+  const startInEditMode = searchParams.get("new") === "1";
+  return <PracticeDetail key={id} id={id} startInEditMode={startInEditMode} />;
+}
+
+function PracticeDetail({ id, startInEditMode }: { id: string; startInEditMode: boolean }) {
   const router = useRouter();
   const [copied, setCopied] = useState(false);
   const [editingDate, setEditingDate] = useState(false);
   // Freshly-created practices (routed here with ?new=1) open straight into
   // edit mode so there's something to write; otherwise start in view mode.
-  const [editing, setEditing] = useState(searchParams.get("new") === "1");
+  const [editing, setEditing] = useState(startInEditMode);
 
   const practice = useLiveQuery(() => db.practices.get(id), [id]);
   const allPractices = useLiveQuery(() => db.practices.toArray(), []);
@@ -117,8 +131,7 @@ function PracticeDetail() {
   function setLines(setId: string, lines: PracticeLine[]) {
     const set = currentPractice.sets.find((s) => s.id === setId);
     if (!set) return;
-    const reps = syncRepsWithLines(lines, set.reps, "push", "practice");
-    const sets = currentPractice.sets.map((s) => (s.id === setId ? { ...s, lines, reps } : s));
+    const sets = currentPractice.sets.map((s) => (s.id === setId ? { ...s, lines } : s));
     save({ ...currentPractice, sets });
   }
 
@@ -147,6 +160,41 @@ function PracticeDetail() {
     const sets = currentPractice.sets.map((s) =>
       s.id === setId ? { ...s, reps: s.reps.map((r) => (r.id === repId ? rep : r)) } : s,
     );
+    save({ ...currentPractice, sets });
+  }
+
+  function addRep(setId: string) {
+    const set = currentPractice.sets.find((s) => s.id === setId);
+    if (!set) return;
+    const lastRepsLine = [...set.lines].reverse().find(
+      (l): l is RepGroupLine => l.kind === "reps",
+    );
+    const rep: Rep = {
+      id: newId(),
+      repIndex: set.reps.length + 1,
+      distance: lastRepsLine?.distance ?? 100,
+      stroke: lastRepsLine?.stroke ?? "free",
+      time: null,
+      strokeCount: null,
+      restIntervalSeconds: lastRepsLine?.intervalSeconds ?? null,
+      rpe: null,
+      start: "push",
+      suit: "practice",
+    };
+    const sets = currentPractice.sets.map((s) =>
+      s.id === setId ? { ...s, reps: [...s.reps, rep] } : s,
+    );
+    save({ ...currentPractice, sets });
+  }
+
+  function removeRep(setId: string, repId: string) {
+    const sets = currentPractice.sets.map((s) => {
+      if (s.id !== setId) return s;
+      const reps = s.reps
+        .filter((r) => r.id !== repId)
+        .map((r, i) => ({ ...r, repIndex: i + 1 }));
+      return { ...s, reps };
+    });
     save({ ...currentPractice, sets });
   }
 
@@ -181,17 +229,7 @@ function PracticeDetail() {
   }
 
   function insertTemplateAfter(index: number, template: SetTemplate) {
-    insertBlockAt(
-      index,
-      makeSetFromTemplate(
-        template.type,
-        template.label,
-        template.repCount,
-        template.distance,
-        template.stroke,
-        template.baseIntervalSeconds,
-      ),
-    );
+    insertBlockAt(index, makeSetFromTemplate(template));
   }
 
   function insertNoteAfter(index: number) {
@@ -300,6 +338,8 @@ function PracticeDetail() {
                   onDeleteLine={(lineId) => deleteSetLine(set.id, lineId)}
                   onAddLine={(line, parentRoundId) => addSetLine(set.id, line, parentRoundId)}
                   onUpdateRep={(repId, rep) => updateRep(set.id, repId, rep)}
+                  onAddRep={() => addRep(set.id)}
+                  onRemoveRep={(repId) => removeRep(set.id, repId)}
                   repScores={repScores}
                 />
                 {editing && (
@@ -384,6 +424,8 @@ function BlockPanel({
   onDeleteLine,
   onAddLine,
   onUpdateRep,
+  onAddRep,
+  onRemoveRep,
   repScores,
 }: {
   set: PracticeSet;
@@ -397,6 +439,8 @@ function BlockPanel({
   onDeleteLine: (lineId: string) => void;
   onAddLine: (line: PracticeLine, parentRoundId?: string) => void;
   onUpdateRep: (repId: string, rep: Rep) => void;
+  onAddRep: () => void;
+  onRemoveRep: (repId: string) => void;
   repScores: { repId: string; compositeScore: number | null }[];
 }) {
   const [editingLabel, setEditingLabel] = useState(false);
@@ -461,18 +505,24 @@ function BlockPanel({
         onAddLine={editing ? onAddLine : undefined}
       />
 
-      {set.reps.length > 0 && (
-        <div className="mt-3 space-y-1.5 border-t border-border/40 pt-3">
-          {set.reps.map((rep) => (
-            <RepRow
-              key={rep.id}
-              rep={rep}
-              score={repScores.find((r) => r.repId === rep.id)?.compositeScore ?? null}
-              onChange={(r) => onUpdateRep(rep.id, r)}
-            />
-          ))}
-        </div>
-      )}
+      <div className="mt-3 space-y-1.5 border-t border-border/40 pt-3">
+        {set.reps.map((rep) => (
+          <RepRow
+            key={rep.id}
+            rep={rep}
+            score={repScores.find((r) => r.repId === rep.id)?.compositeScore ?? null}
+            onChange={(r) => onUpdateRep(rep.id, r)}
+            onRemove={() => onRemoveRep(rep.id)}
+          />
+        ))}
+        <button
+          type="button"
+          onClick={onAddRep}
+          className="flex items-center gap-1 rounded-lg border border-dashed border-border px-2 py-1 text-xs text-text-tertiary active:opacity-70"
+        >
+          <Plus size={12} /> Add time
+        </button>
+      </div>
     </div>
   );
 }
@@ -543,9 +593,9 @@ function BlockActionsBar({
                 className="flex w-full items-center justify-between px-2 py-2 text-left active:opacity-70"
               >
                 <div>
-                  <p className="text-sm text-text-primary">{t.label}</p>
+                  <p className="text-sm text-text-primary">{t.label || t.type}</p>
                   <p className="text-xs text-text-tertiary">
-                    {t.repCount}x{t.distance} {t.stroke}
+                    {countReps(t.lines)} reps · {totalDistance(t.lines)} {t.course === "SCY" ? "yd" : "m"}
                   </p>
                 </div>
                 <Badge tone="neutral" className="capitalize">

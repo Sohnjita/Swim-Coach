@@ -96,10 +96,7 @@ export interface SetTemplate {
   type: SetType;
   label: string;
   course: Course;
-  stroke: Stroke;
-  repCount: number;
-  distance: number;
-  baseIntervalSeconds: number | null;
+  lines: PracticeLine[]; // written line-by-line, same as a practice block
   notes?: string;
   createdAt: string;
 }

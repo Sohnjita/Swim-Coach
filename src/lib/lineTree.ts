@@ -144,34 +144,25 @@ export function appendItemToRound(
   });
 }
 
-/**
- * Re-expands notation lines into reps, preserving already-logged results
- * (time/strokeCount/rpe/start/suit) wherever the new rep at a given position
- * still matches the old one's distance+stroke. Lets writing/editing notation
- * and logging results happen on the same page without a separate "generate
- * rep log" step or wiping data on every edit.
- */
-export function syncRepsWithLines(
-  lines: PracticeLine[],
-  existingReps: Rep[],
-  start: StartType,
-  suit: SuitType,
-): Rep[] {
-  const fresh = expandLinesToReps(lines, start, suit);
-  return fresh.map((rep, i) => {
-    const prev = existingReps[i];
-    if (prev && prev.distance === rep.distance && prev.stroke === rep.stroke) {
-      return {
-        ...rep,
-        id: prev.id,
-        time: prev.time,
-        strokeCount: prev.strokeCount,
-        rpe: prev.rpe,
-        start: prev.start,
-        suit: prev.suit,
-      };
+/** Finds the first rep-group line in a (possibly nested) line tree, if any. */
+export function findFirstRepsLine(lines: PracticeLine[]): RepGroupLine | null {
+  for (const line of lines) {
+    if (line.kind === "reps") return line;
+    if (line.kind === "round") {
+      const found = findFirstRepsLine(line.items);
+      if (found) return found;
     }
-    return rep;
+  }
+  return null;
+}
+
+/** Deep-clones a line tree with fresh ids at every level (for instantiating a saved template). */
+export function cloneLinesWithFreshIds(lines: PracticeLine[]): PracticeLine[] {
+  return lines.map((line) => {
+    if (line.kind === "round") {
+      return { ...line, id: newId(), items: cloneLinesWithFreshIds(line.items) };
+    }
+    return { ...line, id: newId() };
   });
 }
 
