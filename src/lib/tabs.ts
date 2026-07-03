@@ -24,7 +24,11 @@ export const TABS: TabDef[] = [
 
 // Shared by both the traveling tab icon and the content reveal so the
 // content pulls up/down with the tab, in lockstep, at the same pace.
+// A gentle spring (no overshoot) reads as a smooth glide rather than a
+// snappy slide.
 export const SWIM_TRANSITION = {
-  duration: 0.5,
-  ease: [0.22, 0.61, 0.36, 1] as [number, number, number, number],
+  type: "spring" as const,
+  stiffness: 160,
+  damping: 24,
+  mass: 1,
 };

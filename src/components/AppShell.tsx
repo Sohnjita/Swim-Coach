@@ -71,7 +71,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
         <div className="mx-auto flex max-w-md items-start py-2">
           {TABS.map(({ href, label, icon: Icon }) => {
             const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
-            const traveled = active;
+            const traveled = active && href !== "/";
             return (
               <button
                 key={href}
@@ -89,7 +89,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
                 >
                   <span
                     className={cn(
-                      "z-10 flex h-9 w-9 items-center justify-center rounded-full",
+                      "z-10 flex h-9 w-9 items-center justify-center rounded-2xl",
                       active ? "buoy-active" : "buoy-inactive",
                     )}
                   >

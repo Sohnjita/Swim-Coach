@@ -4,7 +4,7 @@ import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
-import { Check, Copy, Pencil, Trash2 } from "lucide-react";
+import { ArrowLeft, Check, Copy, Pencil, Trash2 } from "lucide-react";
 import { db, SCORING_CONFIG_ID } from "@/lib/db";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Card, CardTitle } from "@/components/ui/Card";
@@ -12,11 +12,11 @@ import { Button } from "@/components/ui/Button";
 import { ScoreRing } from "@/components/ui/ScoreRing";
 import { Badge } from "@/components/ui/Badge";
 import { NotationDocument } from "@/components/practice/NotationDocument";
-import { formatLines } from "@/lib/lineTree";
+import { formatLines, updateLineById } from "@/lib/lineTree";
 import { buildRepHistory, DEFAULT_SCORING_CONFIG, scorePractice, scoreSet } from "@/lib/scoring";
 import { formatDateLabel } from "@/lib/format";
 import { formatTime } from "@/lib/conversions";
-import type { Practice, PracticeSet } from "@/lib/types";
+import type { Practice, PracticeLine, PracticeSet } from "@/lib/types";
 
 function isSetLogged(set: PracticeSet): boolean {
   return set.reps.some((rep) => rep.time !== null);
@@ -60,11 +60,31 @@ function PracticeDetail() {
     router.push("/practices");
   }
 
+  const currentPractice: Practice = practice;
+
+  async function updateSetLine(setId: string, lineId: string, next: PracticeLine) {
+    const updated: Practice = {
+      ...currentPractice,
+      sets: currentPractice.sets.map((s) =>
+        s.id === setId ? { ...s, lines: updateLineById(s.lines, lineId, next) } : s,
+      ),
+      updatedAt: new Date().toISOString(),
+    };
+    await db.practices.put(updated);
+  }
+
   return (
     <div>
       <PageHeader
         title={formatDateLabel(practice.date)}
         subtitle={`${practice.course} · ${practice.sets.length} sets`}
+        leading={
+          <Link href="/practices">
+            <Button variant="ghost" size="icon">
+              <ArrowLeft size={18} />
+            </Button>
+          </Link>
+        }
         action={
           <div className="flex gap-1">
             <Link href={`/practices/detail/edit?id=${id}`}>
@@ -80,7 +100,7 @@ function PracticeDetail() {
       />
 
       <div className="space-y-4 p-4">
-        <WrittenWorkout practice={practice} />
+        <WrittenWorkout practice={practice} onUpdateLine={updateSetLine} />
 
         <Card className="flex items-center gap-4">
           <ScoreRing score={practiceScore} size={64} label="score" />
@@ -163,7 +183,13 @@ function PracticeDetail() {
   );
 }
 
-function WrittenWorkout({ practice }: { practice: Practice }) {
+function WrittenWorkout({
+  practice,
+  onUpdateLine,
+}: {
+  practice: Practice;
+  onUpdateLine: (setId: string, lineId: string, next: PracticeLine) => void;
+}) {
   const [copied, setCopied] = useState(false);
 
   async function handleCopy() {
@@ -191,7 +217,10 @@ function WrittenWorkout({ practice }: { practice: Practice }) {
         {practice.sets.map((set) => (
           <div key={set.id}>
             <p className="mb-1 text-xs text-text-tertiary">{set.label || set.type}</p>
-            <NotationDocument lines={set.lines} />
+            <NotationDocument
+              lines={set.lines}
+              onUpdateLine={(lineId, next) => onUpdateLine(set.id, lineId, next)}
+            />
           </div>
         ))}
       </div>

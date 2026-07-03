@@ -59,8 +59,8 @@ function splitTopLevel(input: string, sep: string): string[] {
   return parts.map((p) => p.trim()).filter(Boolean);
 }
 
-function parseTail(tail: string): { stroke: Stroke; modifier: LineModifier; tag?: string } {
-  let stroke: Stroke = "breast";
+function parseTail(tail: string): { stroke?: Stroke; modifier: LineModifier; tag?: string } {
+  let stroke: Stroke | undefined;
   let modifier: LineModifier = "swim";
   let strokeSet = false;
   let modifierSet = false;

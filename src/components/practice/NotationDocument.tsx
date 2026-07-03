@@ -93,7 +93,8 @@ export function NotationDocument({
   );
 }
 
-const STROKES: { label: string; value: Stroke }[] = [
+const STROKES: { label: string; value: Stroke | null }[] = [
+  { label: "None", value: null },
   { label: "Free", value: "free" },
   { label: "Back", value: "back" },
   { label: "Breast", value: "breast" },
@@ -229,7 +230,7 @@ function RepLineEditor({
   const [count, setCount] = useState(line.count);
   const [distance, setDistance] = useState(line.distance);
   const [intervalText, setIntervalText] = useState(formatInterval(line.intervalSeconds));
-  const [stroke, setStroke] = useState<Stroke>(line.stroke);
+  const [stroke, setStroke] = useState<Stroke | null>(line.stroke ?? null);
   const [modifier, setModifier] = useState<LineModifier>(line.modifier);
   const [tag, setTag] = useState(line.tag ?? "");
 
@@ -285,7 +286,7 @@ function RepLineEditor({
               count,
               distance,
               intervalSeconds: parseInterval(intervalText),
-              stroke,
+              stroke: stroke ?? undefined,
               modifier,
               tag: tag.trim() || undefined,
             })

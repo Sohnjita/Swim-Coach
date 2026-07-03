@@ -42,7 +42,7 @@ export interface RepGroupLine {
   count: number;
   distance: number;
   intervalSeconds: number | null;
-  stroke: Stroke;
+  stroke?: Stroke; // omit to leave unspecified — note it in tag instead
   modifier: LineModifier;
   tag?: string; // free text like "ez", "build", "DPS", "descend 1-4"
 }

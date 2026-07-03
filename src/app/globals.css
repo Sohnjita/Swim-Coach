@@ -104,25 +104,26 @@ body {
   pointer-events: none;
 }
 
-/* Active tab buoy: deeper, glossier than a standard button for a "raised
-   marker" feel since it also has to read clearly while mid-swim. */
+/* Active tab tile: a softly rounded plate with a lit inner glow, like a
+   pool-deck button lighting up under a finger. */
 .buoy-active {
-  background-image: linear-gradient(180deg, var(--accent), var(--accent-strong));
+  background-image: linear-gradient(160deg, var(--accent) 0%, var(--accent-strong) 100%);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.22),
-    inset 0 -2px 2px rgba(0, 0, 0, 0.3),
-    0 8px 20px -6px rgba(4, 12, 20, 0.75),
-    0 2px 4px rgba(0, 0, 0, 0.4);
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    inset 0 -3px 4px rgba(0, 0, 0, 0.22),
+    0 0 0 1px rgba(255, 255, 255, 0.05),
+    0 10px 20px -8px rgba(74, 122, 168, 0.7),
+    0 2px 5px rgba(0, 0, 0, 0.4);
   color: var(--accent-text);
 }
 
-/* Resting (inactive) tab buoy: a small embossed pebble. */
+/* Resting (inactive) tab tile: a recessed plate, unlit. */
 .buoy-inactive {
-  background-image: linear-gradient(180deg, #1c3149 0%, #0f2032 100%);
+  background-image: linear-gradient(160deg, #1a2e45 0%, #0c1a29 100%);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.1),
-    inset 0 -2px 3px rgba(0, 0, 0, 0.35),
-    0 3px 8px -4px rgba(0, 0, 0, 0.65);
+    inset 0 1px 0 rgba(255, 255, 255, 0.07),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.4),
+    0 3px 8px -5px rgba(0, 0, 0, 0.7);
   border: 1px solid var(--border-strong);
 }
 

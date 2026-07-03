@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import { Plus, Trash2 } from "lucide-react";
 import { db, SCORING_CONFIG_ID, newId } from "@/lib/db";
@@ -26,6 +27,16 @@ const COURSES: { label: string; value: Course }[] = [
 ];
 
 export default function TimesPage() {
+  return (
+    <Suspense fallback={null}>
+      <TimesPageContent />
+    </Suspense>
+  );
+}
+
+function TimesPageContent() {
+  const searchParams = useSearchParams();
+  const prefillDate = searchParams.get("date") ?? undefined;
   const practices = useLiveQuery(() => db.practices.toArray(), []);
   const scoringConfig =
     useLiveQuery(() => db.scoringConfig.get(SCORING_CONFIG_ID), []) ??
@@ -36,7 +47,7 @@ export default function TimesPage() {
   );
   const standards = useLiveQuery(() => db.standards.toArray(), []);
 
-  const [showResultForm, setShowResultForm] = useState(false);
+  const [showResultForm, setShowResultForm] = useState(searchParams.get("addResult") === "1");
   const [showStandardForm, setShowStandardForm] = useState(false);
 
   const predictions =
@@ -117,7 +128,9 @@ export default function TimesPage() {
               <Plus size={18} />
             </Button>
           </div>
-          {showResultForm && <NewResultForm onDone={() => setShowResultForm(false)} />}
+          {showResultForm && (
+            <NewResultForm initialDate={prefillDate} onDone={() => setShowResultForm(false)} />
+          )}
           {(!results || results.length === 0) && !showResultForm ? (
             <p className="text-sm text-text-tertiary">No meet results logged yet.</p>
           ) : (
@@ -190,8 +203,14 @@ export default function TimesPage() {
   );
 }
 
-function NewResultForm({ onDone }: { onDone: () => void }) {
-  const [date, setDate] = useState(todayISO());
+function NewResultForm({
+  initialDate,
+  onDone,
+}: {
+  initialDate?: string;
+  onDone: () => void;
+}) {
+  const [date, setDate] = useState(initialDate ?? todayISO());
   const [meetName, setMeetName] = useState("");
   const [event, setEvent] = useState<CutEvent>("100 Breast");
   const [course, setCourse] = useState<Course>("LCM");

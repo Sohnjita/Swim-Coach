@@ -2,15 +2,17 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus } from "lucide-react";
+import { useLiveQuery } from "dexie-react-hooks";
+import { Layers, Plus } from "lucide-react";
 import { db, newId } from "@/lib/db";
 import type { Course, Practice, PracticeSet } from "@/lib/types";
 import { todayISO, formatDateLabel } from "@/lib/format";
-import { takePendingSet } from "@/lib/practiceHelpers";
+import { makeSetFromTemplate, takePendingSet } from "@/lib/practiceHelpers";
 import { Segmented } from "@/components/ui/Segmented";
 import { Field, Input } from "@/components/ui/Field";
 import { Button } from "@/components/ui/Button";
 import { Card, CardTitle } from "@/components/ui/Card";
+import { Badge } from "@/components/ui/Badge";
 import { BlockEditor } from "./BlockEditor";
 
 const COURSES: { label: string; value: Course }[] = [
@@ -23,9 +25,15 @@ function emptyBlock(): PracticeSet {
   return { id: newId(), type: "aerobic", label: "", lines: [], reps: [] };
 }
 
-export function PracticeForm({ initial }: { initial?: Practice }) {
+export function PracticeForm({
+  initial,
+  initialDate,
+}: {
+  initial?: Practice;
+  initialDate?: string;
+}) {
   const router = useRouter();
-  const [date, setDate] = useState(initial?.date ?? todayISO());
+  const [date, setDate] = useState(initial?.date ?? initialDate ?? todayISO());
   const [course, setCourse] = useState<Course>(initial?.course ?? "SCY");
   const [blocks, setBlocks] = useState<PracticeSet[]>(initial?.sets ?? [emptyBlock()]);
   const [sleepHours, setSleepHours] = useState(initial?.sleepHours?.toString() ?? "");
@@ -37,6 +45,8 @@ export function PracticeForm({ initial }: { initial?: Practice }) {
   const [notes, setNotes] = useState(initial?.notes ?? "");
   const [saving, setSaving] = useState(false);
   const [editingDate, setEditingDate] = useState(false);
+  const [showSetPicker, setShowSetPicker] = useState(false);
+  const templates = useLiveQuery(() => db.setTemplates.toArray(), []);
 
   useEffect(() => {
     if (initial) return; // only prefill fresh practices
@@ -59,6 +69,19 @@ export function PracticeForm({ initial }: { initial?: Practice }) {
 
   function removeBlock(id: string) {
     setBlocks((prev) => prev.filter((s) => s.id !== id));
+  }
+
+  function insertTemplate(template: NonNullable<typeof templates>[number]) {
+    const block = makeSetFromTemplate(
+      template.type,
+      template.label,
+      template.repCount,
+      template.distance,
+      template.stroke,
+      template.baseIntervalSeconds,
+    );
+    setBlocks((prev) => [...prev, block]);
+    setShowSetPicker(false);
   }
 
   async function save() {
@@ -115,13 +138,55 @@ export function PracticeForm({ initial }: { initial?: Practice }) {
         />
       ))}
 
-      <Button
-        variant="secondary"
-        className="w-full"
-        onClick={() => setBlocks((prev) => [...prev, emptyBlock()])}
-      >
-        <Plus size={16} /> Add block
-      </Button>
+      <div className="flex gap-2">
+        <Button
+          variant="secondary"
+          className="flex-1"
+          onClick={() => setBlocks((prev) => [...prev, emptyBlock()])}
+        >
+          <Plus size={16} /> Add block
+        </Button>
+        <Button
+          variant="secondary"
+          className="flex-1"
+          onClick={() => setShowSetPicker((v) => !v)}
+        >
+          <Layers size={16} /> From set library
+        </Button>
+      </div>
+
+      {showSetPicker && (
+        <Card>
+          <CardTitle className="mb-2">Insert a saved set</CardTitle>
+          {!templates || templates.length === 0 ? (
+            <p className="text-sm text-text-tertiary">
+              No saved sets yet — save one from the Set Library first.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {templates.map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => insertTemplate(t)}
+                  className="flex w-full items-center justify-between rounded-lg border border-border bg-bg-elevated-2 p-2 text-left active:opacity-70"
+                >
+                  <div>
+                    <p className="text-sm text-text-primary">{t.label}</p>
+                    <p className="text-xs text-text-tertiary">
+                      {t.repCount}x{t.distance} {t.stroke}
+                      {t.baseIntervalSeconds ? ` · :${t.baseIntervalSeconds}` : ""}
+                    </p>
+                  </div>
+                  <Badge tone="neutral" className="capitalize">
+                    {t.type}
+                  </Badge>
+                </button>
+              ))}
+            </div>
+          )}
+        </Card>
+      )}
 
       <Card>
         <CardTitle className="mb-3">Context</CardTitle>

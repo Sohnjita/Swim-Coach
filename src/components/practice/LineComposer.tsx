@@ -10,7 +10,8 @@ import { Button } from "@/components/ui/Button";
 const DISTANCE_PRESETS = [25, 50, 100, 200];
 const COUNT_PRESETS = [1, 2, 4, 6, 8];
 
-const STROKES: { label: string; value: Stroke }[] = [
+const STROKES: { label: string; value: Stroke | null }[] = [
+  { label: "None", value: null },
   { label: "Free", value: "free" },
   { label: "Back", value: "back" },
   { label: "Breast", value: "breast" },
@@ -66,7 +67,7 @@ export function LineComposer({
   const [count, setCount] = useState(4);
   const [distance, setDistance] = useState(100);
   const [intervalText, setIntervalText] = useState("1:30");
-  const [stroke, setStroke] = useState<Stroke>("breast");
+  const [stroke, setStroke] = useState<Stroke | null>("breast");
   const [modifier, setModifier] = useState<LineModifier>("swim");
   const [tag, setTag] = useState("");
   const [showTextInput, setShowTextInput] = useState(false);
@@ -79,7 +80,7 @@ export function LineComposer({
       count,
       distance,
       intervalSeconds: parseInterval(intervalText),
-      stroke,
+      stroke: stroke ?? undefined,
       modifier,
       tag: tag.trim() || undefined,
     });

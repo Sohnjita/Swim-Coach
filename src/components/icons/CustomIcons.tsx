@@ -7,7 +7,7 @@ interface IconProps {
   className?: string;
 }
 
-/** Erlenmeyer flask (wide angled base, narrow neck) with bubbles rising from the mouth. */
+/** Erlenmeyer flask (wide angled base, narrow neck) with a liquid line and bubbles rising from the mouth. */
 export function FlaskBubblesIcon({ size = 24, strokeWidth = 2, className }: IconProps) {
   return (
     <svg
@@ -21,15 +21,16 @@ export function FlaskBubblesIcon({ size = 24, strokeWidth = 2, className }: Icon
       strokeLinejoin="round"
       className={className}
     >
-      <path d="M9 6h6M9 6v6l-6 9h18l-6-9V6" />
-      <circle cx="11" cy="4" r="0.6" fill="currentColor" stroke="none" />
-      <circle cx="14.2" cy="2.2" r="0.5" fill="currentColor" stroke="none" />
-      <circle cx="12.4" cy="0.6" r="0.4" fill="currentColor" stroke="none" />
+      <path d="M9 4h6M9 4v6l-6 10h18l-6-10V4" />
+      <path d="M5.6 16.5h12.8" />
+      <circle cx="11" cy="2.7" r="0.55" fill="currentColor" stroke="none" />
+      <circle cx="13.4" cy="1.7" r="0.4" fill="currentColor" stroke="none" />
+      <circle cx="10.2" cy="0.9" r="0.3" fill="currentColor" stroke="none" />
     </svg>
   );
 }
 
-/** Three lines with a bullet point trailing to the right of each. */
+/** Three lines with a bullet point to the left of each. */
 export function LinesBulletsIcon({ size = 24, strokeWidth = 2, className }: IconProps) {
   return (
     <svg
@@ -43,10 +44,10 @@ export function LinesBulletsIcon({ size = 24, strokeWidth = 2, className }: Icon
       strokeLinejoin="round"
       className={className}
     >
-      <path d="M4 6h13M4 12h13M4 18h13" />
-      <circle cx="20" cy="6" r="1.15" fill="currentColor" stroke="none" />
-      <circle cx="20" cy="12" r="1.15" fill="currentColor" stroke="none" />
-      <circle cx="20" cy="18" r="1.15" fill="currentColor" stroke="none" />
+      <path d="M9 6h11M9 12h11M9 18h11" />
+      <circle cx="4.5" cy="6" r="1.15" fill="currentColor" stroke="none" />
+      <circle cx="4.5" cy="12" r="1.15" fill="currentColor" stroke="none" />
+      <circle cx="4.5" cy="18" r="1.15" fill="currentColor" stroke="none" />
     </svg>
   );
 }

@@ -30,7 +30,7 @@ export function makeRepGroupLine(
     count: partial.count ?? 4,
     distance: partial.distance ?? 100,
     intervalSeconds: partial.intervalSeconds ?? null,
-    stroke: partial.stroke ?? "breast",
+    stroke: partial.stroke,
     modifier: partial.modifier ?? "swim",
     tag: partial.tag,
   };
@@ -55,7 +55,7 @@ export function formatLine(line: PracticeLine, indent = 0): string[] {
     if (line.intervalSeconds !== null) {
       parts.push(`on ${formatInterval(line.intervalSeconds)}`);
     }
-    parts.push(STROKE_LABEL[line.stroke]);
+    if (line.stroke) parts.push(STROKE_LABEL[line.stroke]);
     if (line.modifier !== "swim") parts.push(line.modifier);
     if (line.tag) parts.push(line.tag);
     return [`${pad}${parts.join(" ")}`];
@@ -110,7 +110,7 @@ export function expandLinesToReps(
               id: newId(),
               repIndex: reps.length + 1,
               distance: item.distance,
-              stroke: item.stroke,
+              stroke: item.stroke ?? "free",
               time: null,
               strokeCount: null,
               restIntervalSeconds: item.intervalSeconds,
