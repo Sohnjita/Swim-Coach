@@ -82,15 +82,12 @@ export default function PracticesPage() {
             <div className="mb-3 flex flex-wrap items-center gap-3">
               {SORT_KEYS.map((key) => {
                 const active = sortSpec?.key === key;
-                // Date is special-cased: "up" always means toward closer
-                // (more recent) dates, "down" toward further-past dates —
-                // the opposite of the generic desc/asc arrow below, since
-                // desc-by-date (newest first) is what reads as "closer".
-                const showUp = active
-                  ? key === "date"
-                    ? sortSpec!.dir === "desc"
-                    : sortSpec!.dir === "asc"
-                  : false;
+                // Up always means "the more-prominent end is first": closer
+                // (more recent) dates for Date, higher values for
+                // Score/Yardage/Type. Both read as desc under the hood
+                // (Date's "closer" and everyone else's "higher" are both the
+                // larger raw value), so "up" is simply dir === "desc".
+                const showUp = active && sortSpec!.dir === "desc";
                 return (
                   <button
                     key={key}

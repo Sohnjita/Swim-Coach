@@ -35,7 +35,7 @@ import {
   updateLineById,
 } from "@/lib/lineTree";
 import { buildRepHistory, DEFAULT_SCORING_CONFIG, scorePractice, scoreSet } from "@/lib/scoring";
-import { makeSetFromTemplate, practiceSummaryLine } from "@/lib/practiceHelpers";
+import { emptyPracticeSet, makeSetFromTemplate, practiceSummaryLine } from "@/lib/practiceHelpers";
 import { formatDateLabel } from "@/lib/format";
 import type {
   Course,
@@ -176,6 +176,10 @@ function PracticeDetail() {
     save({ ...currentPractice, sets });
   }
 
+  function insertBlockAfter(index: number) {
+    insertBlockAt(index, emptyPracticeSet());
+  }
+
   function insertTemplateAfter(index: number, template: SetTemplate) {
     insertBlockAt(
       index,
@@ -299,8 +303,9 @@ function PracticeDetail() {
                   repScores={repScores}
                 />
                 {editing && (
-                  <AddSetBar
+                  <BlockActionsBar
                     templates={templates ?? []}
+                    onAddBlock={() => insertBlockAfter(i)}
                     onAddTemplate={(template) => insertTemplateAfter(i, template)}
                     onAddNote={() => insertNoteAfter(i)}
                     onAddRound={() => insertRoundAfter(i)}
@@ -472,13 +477,15 @@ function BlockPanel({
   );
 }
 
-function AddSetBar({
+function BlockActionsBar({
   templates,
+  onAddBlock,
   onAddTemplate,
   onAddNote,
   onAddRound,
 }: {
   templates: SetTemplate[];
+  onAddBlock: () => void;
   onAddTemplate: (template: SetTemplate) => void;
   onAddNote: () => void;
   onAddRound: () => void;
@@ -487,27 +494,34 @@ function AddSetBar({
 
   return (
     <div className="my-3">
-      <div className="flex gap-2">
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={onAddBlock}
+          className="flex items-center gap-1 rounded-lg border border-dashed border-border px-2 py-1 text-xs text-text-tertiary active:opacity-70"
+        >
+          <Plus size={12} /> Block
+        </button>
         <button
           type="button"
           onClick={() => setShowPicker((v) => !v)}
-          className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-dashed border-border py-2 text-xs text-text-tertiary active:opacity-70"
+          className="flex items-center gap-1 rounded-lg border border-dashed border-border px-2 py-1 text-xs text-text-tertiary active:opacity-70"
         >
-          <Plus size={13} /> Add set
+          <Plus size={12} /> Set
         </button>
         <button
           type="button"
           onClick={onAddNote}
-          className="flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-border px-3 py-2 text-xs text-text-tertiary active:opacity-70"
+          className="flex items-center gap-1 rounded-lg border border-dashed border-border px-2 py-1 text-xs text-text-tertiary active:opacity-70"
         >
-          <TypeIcon size={13} /> Note
+          <TypeIcon size={12} /> Note
         </button>
         <button
           type="button"
           onClick={onAddRound}
-          className="flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-border px-3 py-2 text-xs text-text-tertiary active:opacity-70"
+          className="flex items-center gap-1 rounded-lg border border-dashed border-border px-2 py-1 text-xs text-text-tertiary active:opacity-70"
         >
-          <Brackets size={13} /> Round
+          <Brackets size={12} /> Round
         </button>
       </div>
 
