@@ -15,7 +15,7 @@ import {
   startOfWeek,
   subMonths,
 } from "date-fns";
-import { ChevronLeft, ChevronRight, Dumbbell, ListPlus, Trophy } from "lucide-react";
+import { ChevronLeft, ChevronRight, Dumbbell, ListPlus, Plus, Trophy } from "lucide-react";
 import { db, newId } from "@/lib/db";
 import type { CalendarEventType } from "@/lib/types";
 import { Card, CardTitle } from "@/components/ui/Card";
@@ -39,6 +39,7 @@ export function HomeCalendar() {
   const [month, setMonth] = useState(() => startOfMonth(new Date()));
   const [selected, setSelected] = useState(todayISO());
   const [loggingLift, setLoggingLift] = useState(false);
+  const [showAdd, setShowAdd] = useState(false);
 
   const events = useLiveQuery(() => db.calendarEvents.toArray(), []);
 
@@ -63,16 +64,32 @@ export function HomeCalendar() {
   function selectDay(iso: string) {
     setSelected(iso);
     setLoggingLift(false);
+    setShowAdd(false);
   }
 
   async function logPractice() {
     const practice = newPractice(selected);
     await db.practices.put(practice);
+    await db.calendarEvents.put({
+      id: newId(),
+      date: selected,
+      type: "swim",
+      title: "Practice",
+      linkedPracticeId: practice.id,
+      completed: true,
+    });
     router.push(`/practices/detail?id=${practice.id}&new=1`);
   }
 
-  function logMeet() {
-    router.push(`/times?date=${selected}&addResult=1`);
+  async function logMeet() {
+    await db.calendarEvents.put({
+      id: newId(),
+      date: selected,
+      type: "meet",
+      title: "Meet",
+      completed: false,
+    });
+    router.push("/times");
   }
 
   async function addLift(title: string) {
@@ -85,6 +102,7 @@ export function HomeCalendar() {
       completed: false,
     });
     setLoggingLift(false);
+    setShowAdd(false);
   }
 
   return (
@@ -170,23 +188,38 @@ export function HomeCalendar() {
 
         {loggingLift ? (
           <LiftForm onCancel={() => setLoggingLift(false)} onSave={addLift} />
-        ) : (
-          <div className="flex gap-2">
-            <Button variant="secondary" size="sm" className="flex-1" onClick={logPractice}>
-              <ListPlus size={14} /> Practice
-            </Button>
-            <Button variant="secondary" size="sm" className="flex-1" onClick={logMeet}>
-              <Trophy size={14} /> Meet
-            </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              className="flex-1"
-              onClick={() => setLoggingLift(true)}
+        ) : showAdd ? (
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={logPractice}
+              className="flex items-center gap-1 rounded-lg border border-dashed border-border px-2 py-1 text-xs text-text-tertiary active:opacity-70"
             >
-              <Dumbbell size={14} /> Lift
-            </Button>
+              <ListPlus size={12} /> Practice
+            </button>
+            <button
+              type="button"
+              onClick={logMeet}
+              className="flex items-center gap-1 rounded-lg border border-dashed border-border px-2 py-1 text-xs text-text-tertiary active:opacity-70"
+            >
+              <Trophy size={12} /> Meet
+            </button>
+            <button
+              type="button"
+              onClick={() => setLoggingLift(true)}
+              className="flex items-center gap-1 rounded-lg border border-dashed border-border px-2 py-1 text-xs text-text-tertiary active:opacity-70"
+            >
+              <Dumbbell size={12} /> Lift
+            </button>
           </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setShowAdd(true)}
+            className="flex items-center gap-1 rounded-lg border border-dashed border-border px-2 py-1 text-xs text-text-tertiary active:opacity-70"
+          >
+            <Plus size={12} /> Log
+          </button>
         )}
       </div>
     </Card>

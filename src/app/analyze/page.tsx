@@ -25,7 +25,6 @@ export default function AnalyzePage() {
   const scoringConfig =
     useLiveQuery(() => db.scoringConfig.get(SCORING_CONFIG_ID), []) ??
     DEFAULT_SCORING_CONFIG;
-  const standards = useLiveQuery(() => db.standards.toArray(), []);
 
   const history = practices ? buildRepHistory(practices, scoringConfig) : [];
 
@@ -86,39 +85,21 @@ export default function AnalyzePage() {
             </Link>
           </div>
           <div className="space-y-3">
-            {predictions.map((pred) => {
-              const standard = standards?.find((s) => s.event === pred.event);
-              return (
-                <div key={pred.event} className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-text-primary">{pred.event}</p>
-                    <p className="text-xs text-text-tertiary">
-                      {pred.basedOnDate
-                        ? `Best effort ${formatDateLabel(pred.basedOnDate)}`
-                        : "No sprint/lactate reps logged yet"}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-medium text-text-primary">
-                      {formatTime(pred.predictedTaperedSeconds)}
-                    </p>
-                    {standard && pred.predictedTaperedSeconds !== null && (
-                      <p
-                        className={
-                          pred.predictedTaperedSeconds <= standard.timeSeconds
-                            ? "text-xs text-accent"
-                            : "text-xs text-text-tertiary"
-                        }
-                      >
-                        {pred.predictedTaperedSeconds <= standard.timeSeconds
-                          ? "under cut"
-                          : `+${(pred.predictedTaperedSeconds - standard.timeSeconds).toFixed(2)}s off cut`}
-                      </p>
-                    )}
-                  </div>
+            {predictions.map((pred) => (
+              <div key={pred.event} className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-text-primary">{pred.event}</p>
+                  <p className="text-xs text-text-tertiary">
+                    {pred.basedOnDate
+                      ? `Best effort ${formatDateLabel(pred.basedOnDate)}`
+                      : "No sprint/lactate reps logged yet"}
+                  </p>
                 </div>
-              );
-            })}
+                <p className="text-sm font-medium text-text-primary">
+                  {formatTime(pred.predictedTaperedSeconds)}
+                </p>
+              </div>
+            ))}
           </div>
         </Card>
       </div>

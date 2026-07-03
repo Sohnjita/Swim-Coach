@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { HomeCalendar } from "@/components/home/HomeCalendar";
+import { PowerIndex } from "@/components/home/PowerIndex";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { formatDateLabel, todayISO } from "@/lib/format";
 
@@ -18,6 +19,8 @@ export default function DashboardPage() {
             Full calendar
           </Link>
         </div>
+
+        <PowerIndex />
       </div>
     </div>
   );

@@ -1,6 +1,8 @@
 // Core domain model for Swim Coach.
 // Times are always stored in whole seconds (number, e.g. 61.42 for 1:01.42).
 
+import type { SwimEvent } from "./events";
+
 export type Stroke =
   | "free"
   | "back"
@@ -128,18 +130,19 @@ export type CutEvent = "50 Breast" | "100 Breast";
 
 export interface QualifyingStandard {
   id: string;
-  meet: string; // e.g. "2028 U.S. Olympic Trials"
-  event: CutEvent;
+  meet: string; // e.g. "2026 Futures Championships"
+  event: SwimEvent;
   course: Course;
   gender: "M" | "F";
   timeSeconds: number;
+  verified: boolean; // false for seeded starter cuts pending confirmation
 }
 
 export interface MeetResult {
   id: string;
   date: string;
   meetName: string;
-  event: CutEvent;
+  event: SwimEvent;
   course: Course;
   timeSeconds: number;
   suit: SuitType;

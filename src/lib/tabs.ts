@@ -11,7 +11,7 @@ export interface TabDef {
 export const TABS: TabDef[] = [
   { href: "/", label: "Home", icon: Home },
   { href: "/times", label: "Times", icon: Clock },
-  { href: "/practices", label: "Practices", icon: LinesBulletsIcon },
+  { href: "/practices", label: "Training", icon: LinesBulletsIcon },
   { href: "/analyze", label: "Analyze", icon: FlaskBubblesIcon },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
