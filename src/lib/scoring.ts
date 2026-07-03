@@ -38,6 +38,7 @@ const SET_TYPE_WEIGHT: Record<SetType, number> = {
   sprint: 1.2,
   threshold: 1.0,
   aerobic: 0.8,
+  technique: 0.6,
 };
 
 export function clamp(value: number, min = 0, max = 100): number {

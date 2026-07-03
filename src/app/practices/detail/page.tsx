@@ -35,7 +35,7 @@ import {
   totalDistance,
   updateLineById,
 } from "@/lib/lineTree";
-import { buildRepHistory, DEFAULT_SCORING_CONFIG, scorePractice, scoreSet } from "@/lib/scoring";
+import { buildRepHistory, DEFAULT_SCORING_CONFIG, scoreSet } from "@/lib/scoring";
 import {
   emptyPracticeSet,
   energyFocusLabel,
@@ -56,7 +56,7 @@ import type {
   SetType,
 } from "@/lib/types";
 
-const SET_TYPES: SetType[] = ["aerobic", "threshold", "sprint", "lactate"];
+const SET_TYPES: SetType[] = ["aerobic", "threshold", "sprint", "lactate", "technique"];
 const COURSES: { label: string; value: Course }[] = [
   { label: "SCY", value: "SCY" },
   { label: "SCM", value: "SCM" },
@@ -113,7 +113,6 @@ function PracticeDetail({ id, startInEditMode }: { id: string; startInEditMode: 
   }
 
   const history = buildRepHistory(allPractices, scoringConfig);
-  const { practiceScore } = scorePractice(practice, history, scoringConfig);
   const currentPractice: Practice = practice;
 
   async function save(next: Practice) {
@@ -367,16 +366,6 @@ function PracticeDetail({ id, startInEditMode }: { id: string; startInEditMode: 
               </div>
             );
           })}
-        </div>
-
-        <div className="mt-6 flex items-center gap-4 border-t border-border/40 pt-5">
-          <ScoreRing score={practiceScore} size={64} label="score" />
-          <div>
-            <p className="text-sm text-text-primary">Practice score</p>
-            <p className="text-xs text-text-tertiary">
-              Weighted across sets (sprint/lactate count more toward race prediction)
-            </p>
-          </div>
         </div>
 
         <ContextPanel practice={practice} onChange={(patch) => save({ ...currentPractice, ...patch })} />

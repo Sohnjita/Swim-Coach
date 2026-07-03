@@ -12,7 +12,7 @@ export type Stroke =
 
 export type Course = "SCY" | "SCM" | "LCM" | "Other";
 
-export type SetType = "aerobic" | "threshold" | "sprint" | "lactate";
+export type SetType = "aerobic" | "threshold" | "sprint" | "lactate" | "technique";
 
 /** A practice's overall energy-system focus — set by the swimmer, not derived. */
 export type EnergyFocus = SetType | "other";

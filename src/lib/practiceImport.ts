@@ -8,8 +8,15 @@ import { isNotationSetLine, parseNotationText } from "./notationParser";
 import { todayISO } from "./format";
 import type { Course, EnergyFocus, Practice, PracticeSet, SetType } from "./types";
 
-const SET_TYPES: SetType[] = ["aerobic", "threshold", "sprint", "lactate"];
-const FOCUS_VALUES: EnergyFocus[] = ["aerobic", "threshold", "sprint", "lactate", "other"];
+const SET_TYPES: SetType[] = ["aerobic", "threshold", "sprint", "lactate", "technique"];
+const FOCUS_VALUES: EnergyFocus[] = [
+  "aerobic",
+  "threshold",
+  "sprint",
+  "lactate",
+  "technique",
+  "other",
+];
 const COURSES: Course[] = ["SCY", "SCM", "LCM"];
 
 function parseHeaderLine(raw: string): { key: string; value: string } | null {

@@ -21,7 +21,8 @@ const TYPE_RANK: Record<EnergyFocus, number> = {
   threshold: 1,
   sprint: 2,
   lactate: 3,
-  other: 4,
+  technique: 4,
+  other: 5,
 };
 
 /** Single active sort key: tapping a new key replaces it; tapping the active key flips

@@ -7,6 +7,7 @@ const ENERGY_FOCUS_LABEL: Record<EnergyFocus, string> = {
   threshold: "Threshold",
   sprint: "Sprint",
   lactate: "Lactate",
+  technique: "Technique",
   other: "Other",
 };
 
@@ -15,6 +16,7 @@ export const ENERGY_FOCUS_OPTIONS: EnergyFocus[] = [
   "threshold",
   "sprint",
   "lactate",
+  "technique",
   "other",
 ];
 

@@ -9,6 +9,7 @@ import { db, SCORING_CONFIG_ID } from "@/lib/db";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { ScoreRing } from "@/components/ui/ScoreRing";
+import { SwipeToDeleteRow } from "@/components/ui/SwipeToDeleteRow";
 import { buildRepHistory, DEFAULT_SCORING_CONFIG, scorePractice } from "@/lib/scoring";
 import { newPractice, practiceSummaryLine } from "@/lib/practiceHelpers";
 import { formatDateLabel, todayISO } from "@/lib/format";
@@ -43,6 +44,11 @@ export default function PracticesPage() {
     const practice = newPractice(todayISO());
     await db.practices.put(practice);
     router.push(`/practices/detail?id=${practice.id}&new=1`);
+  }
+
+  async function handleDeletePractice(id: string) {
+    if (!confirm("Delete this practice? This cannot be undone.")) return;
+    await db.practices.delete(id);
   }
 
   return (
@@ -111,22 +117,24 @@ export default function PracticesPage() {
                   ? scorePractice(practice, history, scoringConfig)
                   : { practiceScore: null };
               return (
-                <Link
+                <SwipeToDeleteRow
                   key={practice.id}
-                  href={`/practices/detail?id=${practice.id}`}
-                  className="flex items-center gap-3 py-3"
+                  onClick={() => router.push(`/practices/detail?id=${practice.id}`)}
+                  onDelete={() => handleDeletePractice(practice.id)}
                 >
-                  <ScoreRing score={practiceScore} size={48} />
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-text-primary">
-                      {formatDateLabel(practice.date)}
-                    </p>
-                    <p className="text-xs text-text-tertiary">
-                      {practice.course} · {practiceSummaryLine(practice)}
-                    </p>
+                  <div className="flex items-center gap-3 py-3">
+                    <ScoreRing score={practiceScore} size={48} />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-text-primary">
+                        {formatDateLabel(practice.date)}
+                      </p>
+                      <p className="text-xs text-text-tertiary">
+                        {practice.course} · {practiceSummaryLine(practice)}
+                      </p>
+                    </div>
+                    <ChevronRight size={18} className="text-text-tertiary" />
                   </div>
-                  <ChevronRight size={18} className="text-text-tertiary" />
-                </Link>
+                </SwipeToDeleteRow>
               );
             })}
             </div>

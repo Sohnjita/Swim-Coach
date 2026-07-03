@@ -18,7 +18,7 @@ import {
 } from "@/lib/lineTree";
 import type { Course, PracticeLine, SetTemplate, SetType } from "@/lib/types";
 
-const SET_TYPES: SetType[] = ["aerobic", "threshold", "sprint", "lactate"];
+const SET_TYPES: SetType[] = ["aerobic", "threshold", "sprint", "lactate", "technique"];
 const COURSES: { label: string; value: Course }[] = [
   { label: "SCY", value: "SCY" },
   { label: "SCM", value: "SCM" },
