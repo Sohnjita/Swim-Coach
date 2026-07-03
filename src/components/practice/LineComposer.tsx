@@ -11,7 +11,7 @@ const DISTANCE_PRESETS = [25, 50, 100, 200];
 const COUNT_PRESETS = [1, 2, 4, 6, 8];
 
 const STROKES: { label: string; value: Stroke | null }[] = [
-  { label: "None", value: null },
+  { label: "Mixed", value: null },
   { label: "Free", value: "free" },
   { label: "Back", value: "back" },
   { label: "Breast", value: "breast" },

@@ -94,7 +94,7 @@ export function NotationDocument({
 }
 
 const STROKES: { label: string; value: Stroke | null }[] = [
-  { label: "None", value: null },
+  { label: "Mixed", value: null },
   { label: "Free", value: "free" },
   { label: "Back", value: "back" },
   { label: "Breast", value: "breast" },
