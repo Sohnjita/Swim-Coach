@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
-import { Plus, Layers, ChevronRight, Upload, ArrowDown, ArrowUp } from "lucide-react";
+import { Plus, Layers, Upload, ArrowDown, ArrowUp } from "lucide-react";
 import { db, SCORING_CONFIG_ID } from "@/lib/db";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
@@ -132,7 +132,6 @@ export default function PracticesPage() {
                         {practice.course} · {practiceSummaryLine(practice)}
                       </p>
                     </div>
-                    <ChevronRight size={18} className="text-text-tertiary" />
                   </div>
                 </SwipeToDeleteRow>
               );

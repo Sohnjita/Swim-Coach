@@ -75,7 +75,7 @@ export function SwipeToDeleteRow({
           setOffset(0);
         }}
         aria-label="Delete practice"
-        className="absolute inset-y-0 flex items-center justify-center bg-danger/20 text-danger active:bg-danger/30"
+        className="absolute inset-y-0 flex items-center justify-center text-danger active:opacity-70"
         style={{ left: "100%", width: REVEAL_WIDTH, transform: `translateX(${offset}px)`, transition }}
       >
         <Trash2 size={18} />
