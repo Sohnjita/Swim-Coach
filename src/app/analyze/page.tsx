@@ -13,6 +13,7 @@ import {
   predictGoalTimes,
   scorePractice,
 } from "@/lib/scoring";
+import { practiceSummaryLine } from "@/lib/practiceHelpers";
 import { formatDateLabel } from "@/lib/format";
 import { formatTime } from "@/lib/conversions";
 
@@ -66,7 +67,7 @@ export default function AnalyzePage() {
                         {formatDateLabel(practice.date)}
                       </p>
                       <p className="text-xs text-text-tertiary">
-                        {practice.course} · {practice.sets.length} sets
+                        {practice.course} · {practiceSummaryLine(practice)}
                       </p>
                     </div>
                     <ChevronRight size={18} className="text-text-tertiary" />

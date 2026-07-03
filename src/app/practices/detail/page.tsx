@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/Badge";
 import { NotationDocument } from "@/components/practice/NotationDocument";
 import { formatLines, updateLineById } from "@/lib/lineTree";
 import { buildRepHistory, DEFAULT_SCORING_CONFIG, scorePractice, scoreSet } from "@/lib/scoring";
+import { practiceSummaryLine } from "@/lib/practiceHelpers";
 import { formatDateLabel } from "@/lib/format";
 import { formatTime } from "@/lib/conversions";
 import type { Practice, PracticeLine, PracticeSet } from "@/lib/types";
@@ -77,7 +78,7 @@ function PracticeDetail() {
     <div>
       <PageHeader
         title={formatDateLabel(practice.date)}
-        subtitle={`${practice.course} · ${practice.sets.length} sets`}
+        subtitle={`${practice.course} · ${practiceSummaryLine(practice)}`}
         leading={
           <Link href="/practices">
             <Button variant="ghost" size="icon">

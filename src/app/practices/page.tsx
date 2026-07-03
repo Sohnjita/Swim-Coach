@@ -8,6 +8,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { ScoreRing } from "@/components/ui/ScoreRing";
 import { buildRepHistory, DEFAULT_SCORING_CONFIG, scorePractice } from "@/lib/scoring";
+import { practiceSummaryLine } from "@/lib/practiceHelpers";
 import { formatDateLabel } from "@/lib/format";
 
 export default function PracticesPage() {
@@ -69,8 +70,7 @@ export default function PracticesPage() {
                       {formatDateLabel(practice.date)}
                     </p>
                     <p className="text-xs text-text-tertiary">
-                      {practice.course} · {practice.sets.length} sets ·{" "}
-                      {practice.sets.reduce((n, s) => n + s.reps.length, 0)} reps
+                      {practice.course} · {practiceSummaryLine(practice)}
                     </p>
                   </div>
                   <ChevronRight size={18} className="text-text-tertiary" />
