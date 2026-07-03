@@ -14,7 +14,8 @@ import { Segmented } from "@/components/ui/Segmented";
 import { Field, Input, Select } from "@/components/ui/Field";
 import { buildRepHistory, DEFAULT_SCORING_CONFIG } from "@/lib/scoring";
 import { suggestSetVariation } from "@/lib/variations";
-import { makeSetFromTemplate, stashPendingSet } from "@/lib/practiceHelpers";
+import { makeSetFromTemplate, newPractice } from "@/lib/practiceHelpers";
+import { todayISO } from "@/lib/format";
 
 const SET_TYPES: { label: string; value: SetType }[] = [
   { label: "Aerobic", value: "aerobic" },
@@ -55,7 +56,7 @@ export default function SetsPage() {
     await db.setTemplates.delete(id);
   }
 
-  function startPractice(template: SetTemplate, targetInterval: number | null) {
+  async function startPractice(template: SetTemplate, targetInterval: number | null) {
     const set = makeSetFromTemplate(
       template.type,
       template.label,
@@ -64,8 +65,9 @@ export default function SetsPage() {
       template.stroke,
       targetInterval ?? template.baseIntervalSeconds,
     );
-    stashPendingSet(set, template.course);
-    router.push("/practices/new");
+    const practice = newPractice(todayISO(), template.course, set);
+    await db.practices.put(practice);
+    router.push(`/practices/detail?id=${practice.id}`);
   }
 
   return (

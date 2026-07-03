@@ -34,6 +34,8 @@ export function toLcmEquivalent(
   config: ScoringConfig,
 ): number {
   if (course === "LCM") return timeSeconds;
+  // "Other" pools are unusual/custom lengths — no dedicated conversion table,
+  // so fall back to the SCM percentage as the closest available estimate.
   const percent =
     course === "SCY"
       ? config.scyToLcmPercent[event]

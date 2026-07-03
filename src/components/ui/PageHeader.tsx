@@ -1,5 +1,14 @@
-import type { ReactNode } from "react";
+"use client";
 
+import type { ReactNode } from "react";
+import { useSetHeader } from "@/lib/headerBus";
+
+/**
+ * Publishes this page's icon-band content (back button, action icons, title
+ * for a11y) into AppShell's fixed top band. Renders nothing itself — the
+ * actual chrome lives above the scrollable content, between the pool edge
+ * and the backstroke flags.
+ */
 export function PageHeader({
   title,
   subtitle,
@@ -11,16 +20,10 @@ export function PageHeader({
   leading?: ReactNode;
   action?: ReactNode;
 }) {
-  return (
-    <div
-      className={`relative z-10 flex items-center px-4 pb-2 pt-1 ${leading ? "justify-between" : "justify-end"}`}
-    >
-      <h1 className="sr-only">
-        {title}
-        {subtitle ? ` — ${subtitle}` : ""}
-      </h1>
-      {leading}
-      {action}
-    </div>
-  );
+  useSetHeader({
+    title: subtitle ? `${title} — ${subtitle}` : title,
+    leading,
+    action,
+  });
+  return null;
 }

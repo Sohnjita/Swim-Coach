@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Check, X } from "lucide-react";
+import { Brackets, Check, Plus, Type, X } from "lucide-react";
 import type { LineModifier, PracticeLine, RepGroupLine, RoundLine, Stroke, TextLine } from "@/lib/types";
-import { formatLine } from "@/lib/lineTree";
+import { formatLine, makeRepGroupLine, makeRoundLine, makeTextLine } from "@/lib/lineTree";
 import { formatInterval, parseInterval } from "@/lib/conversions";
 import { cn } from "@/lib/cn";
 
@@ -22,6 +22,8 @@ function flattenForDisplay(lines: PracticeLine[], depth = 0): Row[] {
     if (line.kind === "round") {
       rows.push({ id: line.id, depth, kind: "round-open", line, text: `${line.multiplier}x[` });
       rows.push(...flattenForDisplay(line.items, depth + 1));
+      // "round-close" rows carry the round's own id, used to target
+      // inline "add a line inside this round" insertion.
       rows.push({ id: line.id, depth, kind: "round-close", text: "]" });
     } else {
       rows.push({ id: line.id, depth, kind: line.kind, line, text: formatLine(line)[0] });
@@ -34,61 +36,133 @@ export function NotationDocument({
   lines,
   onDeleteLine,
   onUpdateLine,
+  onAddLine,
 }: {
   lines: PracticeLine[];
   onDeleteLine?: (id: string) => void;
   onUpdateLine?: (id: string, next: PracticeLine) => void;
+  /** Appends a new line. `parentRoundId` targets a round's items instead of the top level. */
+  onAddLine?: (line: PracticeLine, parentRoundId?: string) => void;
 }) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const rows = flattenForDisplay(lines);
 
-  if (rows.length === 0) {
-    return <p className="text-sm text-text-tertiary">No lines yet — add one below.</p>;
-  }
-
   return (
     <div className="font-mono text-[13px] leading-6 text-text-primary">
+      {rows.length === 0 && !onAddLine && (
+        <p className="text-sm text-text-tertiary">No lines yet.</p>
+      )}
       {rows.map((row, i) => {
         const editable = Boolean(onUpdateLine) && row.line !== undefined;
         const isEditing = editable && editingId === row.id;
         return (
-          <div key={`${row.id}-${i}`} style={{ paddingLeft: row.depth * 16 }}>
-            {isEditing ? (
-              <LineRowEditor
-                row={row}
-                onCancel={() => setEditingId(null)}
-                onSave={(next) => {
-                  onUpdateLine!(row.id, next);
-                  setEditingId(null);
-                }}
-              />
-            ) : (
-              <div className="group flex items-center justify-between gap-1 py-0.5">
-                <button
-                  type="button"
-                  disabled={!editable}
-                  onClick={() => editable && setEditingId(row.id)}
-                  className={cn(
-                    "min-w-0 flex-1 truncate text-left",
-                    editable && "rounded active:bg-bg-elevated-2",
-                  )}
-                >
-                  {row.text}
-                </button>
-                {onDeleteLine && (
+          <div key={`${row.id}-${i}`}>
+            <div style={{ paddingLeft: row.depth * 16 }}>
+              {isEditing ? (
+                <LineRowEditor
+                  row={row}
+                  onCancel={() => setEditingId(null)}
+                  onSave={(next) => {
+                    onUpdateLine!(row.id, next);
+                    setEditingId(null);
+                  }}
+                />
+              ) : (
+                <div className="group flex items-center justify-between gap-1 py-0.5">
                   <button
                     type="button"
-                    onClick={() => onDeleteLine(row.id)}
-                    className="p-1 text-text-tertiary opacity-60 active:opacity-100"
+                    disabled={!editable}
+                    onClick={() => editable && setEditingId(row.id)}
+                    className={cn(
+                      "min-w-0 flex-1 truncate text-left",
+                      editable && "rounded active:bg-bg-elevated-2",
+                    )}
                   >
-                    <X size={13} />
+                    {row.text}
                   </button>
-                )}
-              </div>
+                  {onDeleteLine && (
+                    <button
+                      type="button"
+                      onClick={() => onDeleteLine(row.id)}
+                      className="p-1 text-text-tertiary opacity-60 active:opacity-100"
+                    >
+                      <X size={13} />
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+            {row.kind === "round-close" && onAddLine && (
+              <AddLineRow
+                depth={row.depth + 1}
+                allowRound={false}
+                onAdd={(line) => onAddLine(line, row.id)}
+              />
             )}
           </div>
         );
       })}
+      {onAddLine && <AddLineRow depth={0} allowRound onAdd={(line) => onAddLine(line)} />}
+    </div>
+  );
+}
+
+/** Inline "+" bar: tap to pick a line kind, then edit it in place before it's added. */
+function AddLineRow({
+  depth,
+  allowRound,
+  onAdd,
+}: {
+  depth: number;
+  allowRound: boolean;
+  onAdd: (line: PracticeLine) => void;
+}) {
+  const [draft, setDraft] = useState<PracticeLine | null>(null);
+
+  if (draft) {
+    const row: Row =
+      draft.kind === "round"
+        ? { id: draft.id, depth, kind: "round-open", line: draft, text: "" }
+        : { id: draft.id, depth, kind: draft.kind, line: draft, text: "" };
+    return (
+      <div style={{ paddingLeft: depth * 16 }}>
+        <LineRowEditor
+          row={row}
+          onCancel={() => setDraft(null)}
+          onSave={(next) => {
+            onAdd(next);
+            setDraft(null);
+          }}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ paddingLeft: depth * 16 }} className="flex items-center gap-1.5 py-1">
+      <button
+        type="button"
+        onClick={() => setDraft(makeRepGroupLine({}))}
+        className="flex items-center gap-1 rounded-lg border border-dashed border-border px-2 py-1 text-xs text-text-tertiary active:opacity-70"
+      >
+        <Plus size={12} /> Set
+      </button>
+      <button
+        type="button"
+        onClick={() => setDraft(makeTextLine(""))}
+        className="flex items-center gap-1 rounded-lg border border-dashed border-border px-2 py-1 text-xs text-text-tertiary active:opacity-70"
+      >
+        <Type size={12} /> Note
+      </button>
+      {allowRound && (
+        <button
+          type="button"
+          onClick={() => setDraft(makeRoundLine(2))}
+          className="flex items-center gap-1 rounded-lg border border-dashed border-border px-2 py-1 text-xs text-text-tertiary active:opacity-70"
+        >
+          <Brackets size={12} /> Round
+        </button>
+      )}
     </div>
   );
 }

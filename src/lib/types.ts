@@ -10,7 +10,7 @@ export type Stroke =
   | "kick"
   | "drill";
 
-export type Course = "SCY" | "SCM" | "LCM";
+export type Course = "SCY" | "SCM" | "LCM" | "Other";
 
 export type SetType = "aerobic" | "threshold" | "sprint" | "lactate";
 
@@ -78,6 +78,7 @@ export interface Practice {
   id: string;
   date: string; // ISO date (yyyy-mm-dd)
   course: Course;
+  customPoolLengthMeters: number | null; // set when course === "Other"
   sets: PracticeSet[];
   // Context factors, logged once per practice
   sleepHours: number | null;

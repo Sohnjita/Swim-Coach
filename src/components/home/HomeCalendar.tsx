@@ -23,6 +23,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Field";
 import { Badge } from "@/components/ui/Badge";
 import { cn } from "@/lib/cn";
+import { newPractice } from "@/lib/practiceHelpers";
 import { formatDateLabel, todayISO } from "@/lib/format";
 
 const EVENT_DOT: Record<CalendarEventType, string> = {
@@ -64,8 +65,10 @@ export function HomeCalendar() {
     setLoggingLift(false);
   }
 
-  function logPractice() {
-    router.push(`/practices/new?date=${selected}`);
+  async function logPractice() {
+    const practice = newPractice(selected);
+    await db.practices.put(practice);
+    router.push(`/practices/detail?id=${practice.id}`);
   }
 
   function logMeet() {

@@ -131,6 +131,50 @@ export function expandLinesToReps(
   return reps;
 }
 
+/** Recursively appends an item into a round (by id) anywhere in the line tree. */
+export function appendItemToRound(
+  lines: PracticeLine[],
+  roundId: string,
+  item: PracticeLine,
+): PracticeLine[] {
+  return lines.map((line) => {
+    if (line.kind !== "round") return line;
+    if (line.id === roundId) return { ...line, items: [...line.items, item] };
+    return { ...line, items: appendItemToRound(line.items, roundId, item) };
+  });
+}
+
+/**
+ * Re-expands notation lines into reps, preserving already-logged results
+ * (time/strokeCount/rpe/start/suit) wherever the new rep at a given position
+ * still matches the old one's distance+stroke. Lets writing/editing notation
+ * and logging results happen on the same page without a separate "generate
+ * rep log" step or wiping data on every edit.
+ */
+export function syncRepsWithLines(
+  lines: PracticeLine[],
+  existingReps: Rep[],
+  start: StartType,
+  suit: SuitType,
+): Rep[] {
+  const fresh = expandLinesToReps(lines, start, suit);
+  return fresh.map((rep, i) => {
+    const prev = existingReps[i];
+    if (prev && prev.distance === rep.distance && prev.stroke === rep.stroke) {
+      return {
+        ...rep,
+        id: prev.id,
+        time: prev.time,
+        strokeCount: prev.strokeCount,
+        rpe: prev.rpe,
+        start: prev.start,
+        suit: prev.suit,
+      };
+    }
+    return rep;
+  });
+}
+
 export function countReps(lines: PracticeLine[]): number {
   let total = 0;
   for (const line of lines) {

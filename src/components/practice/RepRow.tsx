@@ -19,12 +19,14 @@ const STROKES: { label: string; value: Stroke }[] = [
 
 export function RepRow({
   rep,
+  score,
   onChange,
   onRemove,
 }: {
   rep: Rep;
+  score?: number | null;
   onChange: (rep: Rep) => void;
-  onRemove: () => void;
+  onRemove?: () => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [timeText, setTimeText] = useState(rep.time !== null ? formatTime(rep.time) : "");
@@ -55,6 +57,11 @@ export function RepRow({
           }
           className="h-9 w-14 shrink-0 rounded-lg border border-border bg-bg-elevated px-2 text-center text-[13px] tabular-nums text-text-primary outline-none focus:border-accent"
         />
+        {score !== undefined && (
+          <span className="w-8 shrink-0 text-right text-xs text-text-tertiary">
+            {score !== null ? Math.round(score) : "--"}
+          </span>
+        )}
         <button
           type="button"
           onClick={() => setExpanded((v) => !v)}
@@ -62,13 +69,15 @@ export function RepRow({
         >
           {expanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
         </button>
-        <button
-          type="button"
-          onClick={onRemove}
-          className="shrink-0 p-1 text-text-tertiary"
-        >
-          <Trash2 size={16} />
-        </button>
+        {onRemove && (
+          <button
+            type="button"
+            onClick={onRemove}
+            className="shrink-0 p-1 text-text-tertiary"
+          >
+            <Trash2 size={16} />
+          </button>
+        )}
       </div>
 
       {expanded && (

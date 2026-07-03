@@ -1,6 +1,6 @@
 import { newId } from "./db";
 import { expandLinesToReps, makeRepGroupLine, totalDistance } from "./lineTree";
-import type { Practice, PracticeSet, SetType, Stroke } from "./types";
+import type { Course, Practice, PracticeSet, SetType, Stroke } from "./types";
 
 export type EnergyFocus = SetType | "other";
 
@@ -46,6 +46,28 @@ export function practiceSummaryLine(practice: Practice): string {
   return `Total: ${distance} ${unit} · ${energyFocusLabel(practiceEnergyFocus(practice))}`;
 }
 
+export function emptyPracticeSet(): PracticeSet {
+  return { id: newId(), type: "aerobic", label: "", lines: [], reps: [] };
+}
+
+/** Builds a fresh, unsaved Practice — one empty block ready for line-by-line editing. */
+export function newPractice(date: string, course: Course = "SCY", initialSet?: PracticeSet): Practice {
+  const now = new Date().toISOString();
+  return {
+    id: newId(),
+    date,
+    course,
+    customPoolLengthMeters: null,
+    sets: [initialSet ?? emptyPracticeSet()],
+    sleepHours: null,
+    bodyWeightKg: null,
+    gymThatDay: false,
+    overallRpe: null,
+    createdAt: now,
+    updatedAt: now,
+  };
+}
+
 export function makeSetFromTemplate(
   type: SetType,
   label: string,
@@ -64,23 +86,4 @@ export function makeSetFromTemplate(
     lines,
     reps: expandLinesToReps(lines, "push", "practice"),
   };
-}
-
-const PENDING_KEY = "swim-coach:pending-set";
-
-export function stashPendingSet(set: PracticeSet, course: string) {
-  if (typeof window === "undefined") return;
-  window.sessionStorage.setItem(PENDING_KEY, JSON.stringify({ set, course }));
-}
-
-export function takePendingSet(): { set: PracticeSet; course: string } | null {
-  if (typeof window === "undefined") return null;
-  const raw = window.sessionStorage.getItem(PENDING_KEY);
-  if (!raw) return null;
-  window.sessionStorage.removeItem(PENDING_KEY);
-  try {
-    return JSON.parse(raw);
-  } catch {
-    return null;
-  }
 }

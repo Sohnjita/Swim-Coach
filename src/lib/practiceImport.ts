@@ -88,6 +88,7 @@ export function parsePracticeText(text: string): Practice {
     id: newId(),
     date,
     course,
+    customPoolLengthMeters: null,
     sets,
     sleepHours,
     bodyWeightKg,
