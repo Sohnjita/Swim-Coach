@@ -1,10 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { Plus } from "lucide-react";
 import { HomeCalendar } from "@/components/home/HomeCalendar";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { Button } from "@/components/ui/Button";
 import { formatDateLabel, todayISO } from "@/lib/format";
 
 export default function DashboardPage() {
@@ -20,12 +18,6 @@ export default function DashboardPage() {
             Full calendar
           </Link>
         </div>
-
-        <Link href="/practices/new">
-          <Button className="w-full">
-            <Plus size={18} /> Log a practice
-          </Button>
-        </Link>
       </div>
     </div>
   );

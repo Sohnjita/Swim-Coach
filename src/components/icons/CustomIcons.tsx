@@ -22,17 +22,17 @@ export function FlaskBubblesIcon({ size = 24, strokeWidth = 2, className }: Icon
       className={className}
     >
       <path
-        d="M4.82 16 3 20a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2l-1.82-4z"
+        d="M6 16 4 19a2 2 0 0 0 2 3h12a2 2 0 0 0 2-3l-2-3z"
         fill="currentColor"
         fillOpacity="0.3"
         stroke="none"
       />
-      <path d="M8 4h8M8 4v5l-5 11a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2l-5-11V4" />
-      <path d="M4.82 16h14.36" />
-      <circle cx="9.6" cy="2.1" r="0.55" fill="currentColor" stroke="none" />
-      <circle cx="13.8" cy="2.6" r="0.5" fill="currentColor" stroke="none" />
-      <circle cx="12" cy="0.9" r="0.4" fill="currentColor" stroke="none" />
-      <circle cx="11.2" cy="3.4" r="0.3" fill="currentColor" stroke="none" />
+      <path d="M10 4h4M10 4v5Q10 11 7 14.5L4 19a2 2 0 0 0 2 3h12a2 2 0 0 0 2-3l-3-4.5Q14 11 14 9V4" />
+      <path d="M6 16h12" />
+      <circle cx="9.6" cy="1" r="0.55" fill="currentColor" stroke="none" />
+      <circle cx="14.2" cy="1.5" r="0.5" fill="currentColor" stroke="none" />
+      <circle cx="12" cy="0.1" r="0.4" fill="currentColor" stroke="none" />
+      <circle cx="11" cy="2.6" r="0.3" fill="currentColor" stroke="none" />
     </svg>
   );
 }

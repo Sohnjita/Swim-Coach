@@ -3,19 +3,22 @@
 import type { ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { SWIM_TRANSITION } from "@/lib/tabs";
+
+const EMERGE_TRANSITION = {
+  duration: 0.5,
+  ease: [0.22, 0.61, 0.36, 1] as [number, number, number, number],
+};
 
 const variants = {
-  hidden: { clipPath: "inset(100% 0% 0% 0%)", opacity: 0.4 },
-  visible: { clipPath: "inset(0% 0% 0% 0%)", opacity: 1 },
+  submerged: { opacity: 0.25, y: 28, filter: "blur(8px)" },
+  surfaced: { opacity: 1, y: 0, filter: "blur(0px)" },
 };
 
 /**
- * Wraps routed page content so switching tabs reads as the active tab
- * dragging a curtain up from the bottom as it travels to the top (or
- * dropping it back down as it returns to rest) — the outgoing and
- * incoming pages animate concurrently, using the exact same transition as
- * the tab icon in <AppShell />, so content and icon move at the same pace.
+ * Wraps routed page content so switching tabs reads as the new page
+ * emerging up out of the water to the surface (rising into focus from a
+ * dim, blurred, submerged state) while the old page sinks back down and
+ * out of view — rather than a curtain sliding up/down.
  */
 export default function TabTransitionShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
@@ -25,11 +28,11 @@ export default function TabTransitionShell({ children }: { children: ReactNode }
       <AnimatePresence initial={true}>
         <motion.div
           key={pathname}
-          initial="hidden"
-          animate="visible"
-          exit="hidden"
+          initial="submerged"
+          animate="surfaced"
+          exit="submerged"
           variants={variants}
-          transition={SWIM_TRANSITION}
+          transition={EMERGE_TRANSITION}
           className="absolute inset-0 overflow-y-auto overscroll-contain"
         >
           {children}
