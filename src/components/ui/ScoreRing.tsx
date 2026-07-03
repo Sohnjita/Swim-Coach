@@ -1,3 +1,12 @@
+/** 85+ great (green), 70-84 good (accent blue), 50-69 medium (yellow), 0-49 bad (red). */
+function ringColor(score: number | null): string {
+  if (score === null) return "var(--accent)";
+  if (score >= 85) return "var(--success)";
+  if (score >= 70) return "var(--accent)";
+  if (score >= 50) return "var(--warning)";
+  return "var(--danger)";
+}
+
 export function ScoreRing({
   score,
   size = 64,
@@ -28,7 +37,7 @@ export function ScoreRing({
           cx={size / 2}
           cy={size / 2}
           r={radius}
-          stroke="var(--accent)"
+          stroke={ringColor(score)}
           strokeWidth={stroke}
           fill="none"
           strokeLinecap="round"

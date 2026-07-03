@@ -1,8 +1,6 @@
 import { newId } from "./db";
 import { cloneLinesWithFreshIds, totalDistance } from "./lineTree";
-import type { Course, Practice, PracticeSet, SetTemplate, SetType } from "./types";
-
-export type EnergyFocus = SetType | "other";
+import type { Course, EnergyFocus, Practice, PracticeSet, SetTemplate } from "./types";
 
 const ENERGY_FOCUS_LABEL: Record<EnergyFocus, string> = {
   aerobic: "Aerobic",
@@ -12,27 +10,17 @@ const ENERGY_FOCUS_LABEL: Record<EnergyFocus, string> = {
   other: "Other",
 };
 
+export const ENERGY_FOCUS_OPTIONS: EnergyFocus[] = [
+  "aerobic",
+  "threshold",
+  "sprint",
+  "lactate",
+  "other",
+];
+
 /** Total yardage/meterage across every set in the practice. */
 export function practiceTotalDistance(practice: Practice): number {
   return practice.sets.reduce((sum, set) => sum + totalDistance(set.lines), 0);
-}
-
-/** The set type carrying the most distance in the practice — its dominant energy system. */
-export function practiceEnergyFocus(practice: Practice): EnergyFocus {
-  const distanceByType = new Map<SetType, number>();
-  for (const set of practice.sets) {
-    const dist = totalDistance(set.lines);
-    distanceByType.set(set.type, (distanceByType.get(set.type) ?? 0) + dist);
-  }
-  let focus: EnergyFocus = "other";
-  let focusDistance = 0;
-  for (const [type, dist] of distanceByType) {
-    if (dist > focusDistance) {
-      focus = type;
-      focusDistance = dist;
-    }
-  }
-  return focus;
 }
 
 export function energyFocusLabel(focus: EnergyFocus): string {
@@ -43,7 +31,7 @@ export function energyFocusLabel(focus: EnergyFocus): string {
 export function practiceSummaryLine(practice: Practice): string {
   const unit = practice.course === "SCY" ? "yards" : "meters";
   const distance = practiceTotalDistance(practice).toLocaleString();
-  return `Total: ${distance} ${unit} · ${energyFocusLabel(practiceEnergyFocus(practice))}`;
+  return `Total: ${distance} ${unit} · ${energyFocusLabel(practice.focus ?? "aerobic")}`;
 }
 
 export function emptyPracticeSet(): PracticeSet {
@@ -58,9 +46,10 @@ export function newPractice(date: string, course: Course = "SCY", initialSet?: P
     date,
     course,
     customPoolLengthMeters: null,
+    focus: "aerobic",
     sets: [initialSet ?? emptyPracticeSet()],
     sleepHours: null,
-    bodyWeightKg: null,
+    bodyWeightLbs: null,
     gymThatDay: false,
     overallRpe: null,
     createdAt: now,

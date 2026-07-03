@@ -36,10 +36,17 @@ import {
   updateLineById,
 } from "@/lib/lineTree";
 import { buildRepHistory, DEFAULT_SCORING_CONFIG, scorePractice, scoreSet } from "@/lib/scoring";
-import { emptyPracticeSet, makeSetFromTemplate, practiceSummaryLine } from "@/lib/practiceHelpers";
+import {
+  emptyPracticeSet,
+  energyFocusLabel,
+  ENERGY_FOCUS_OPTIONS,
+  makeSetFromTemplate,
+  practiceSummaryLine,
+} from "@/lib/practiceHelpers";
 import { formatDateLabel } from "@/lib/format";
 import type {
   Course,
+  EnergyFocus,
   Practice,
   PracticeLine,
   PracticeSet,
@@ -285,39 +292,45 @@ function PracticeDetail({ id, startInEditMode }: { id: string; startInEditMode: 
       />
 
       <div className="p-4">
-        <div className="mb-5 flex items-center gap-2">
-          {editingDate ? (
-            <input
-              type="date"
-              autoFocus
-              value={practice.date}
-              onChange={(e) => save({ ...currentPractice, date: e.target.value })}
-              onBlur={() => setEditingDate(false)}
-              className="bg-transparent text-base font-medium text-text-primary outline-none"
+        <div className="mb-5 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            {editingDate ? (
+              <input
+                type="date"
+                autoFocus
+                value={practice.date}
+                onChange={(e) => save({ ...currentPractice, date: e.target.value })}
+                onBlur={() => setEditingDate(false)}
+                className="bg-transparent text-base font-medium text-text-primary outline-none"
+              />
+            ) : (
+              <button
+                type="button"
+                onClick={() => setEditingDate(true)}
+                className="text-base font-medium text-text-primary active:opacity-70"
+              >
+                {formatDateLabel(practice.date)}
+              </button>
+            )}
+            <span className="text-text-tertiary">·</span>
+            <CourseField
+              practice={practice}
+              onCourseChange={(course) =>
+                save({
+                  ...currentPractice,
+                  course,
+                  customPoolLengthMeters:
+                    course === "Other" ? currentPractice.customPoolLengthMeters : null,
+                })
+              }
+              onPoolLengthChange={(meters) =>
+                save({ ...currentPractice, customPoolLengthMeters: meters })
+              }
             />
-          ) : (
-            <button
-              type="button"
-              onClick={() => setEditingDate(true)}
-              className="text-base font-medium text-text-primary active:opacity-70"
-            >
-              {formatDateLabel(practice.date)}
-            </button>
-          )}
-          <span className="text-text-tertiary">·</span>
-          <CourseField
-            practice={practice}
-            onCourseChange={(course) =>
-              save({
-                ...currentPractice,
-                course,
-                customPoolLengthMeters:
-                  course === "Other" ? currentPractice.customPoolLengthMeters : null,
-              })
-            }
-            onPoolLengthChange={(meters) =>
-              save({ ...currentPractice, customPoolLengthMeters: meters })
-            }
+          </div>
+          <FocusField
+            focus={practice.focus ?? "aerobic"}
+            onChange={(focus) => save({ ...currentPractice, focus })}
           />
         </div>
 
@@ -408,6 +421,31 @@ function CourseField({
           className="w-24 border-b border-border bg-transparent text-sm text-text-secondary outline-none focus:border-accent"
         />
       )}
+    </div>
+  );
+}
+
+function FocusField({
+  focus,
+  onChange,
+}: {
+  focus: EnergyFocus;
+  onChange: (focus: EnergyFocus) => void;
+}) {
+  return (
+    <div className="relative flex shrink-0 items-center">
+      <select
+        value={focus}
+        onChange={(e) => onChange(e.target.value as EnergyFocus)}
+        className="appearance-none bg-transparent pr-4 text-sm text-text-secondary outline-none"
+      >
+        {ENERGY_FOCUS_OPTIONS.map((f) => (
+          <option key={f} value={f}>
+            {energyFocusLabel(f)}
+          </option>
+        ))}
+      </select>
+      <ChevronDown size={12} className="pointer-events-none absolute right-0 text-text-tertiary" />
     </div>
   );
 }
@@ -505,24 +543,28 @@ function BlockPanel({
         onAddLine={editing ? onAddLine : undefined}
       />
 
-      <div className="mt-3 space-y-1.5 border-t border-border/40 pt-3">
-        {set.reps.map((rep) => (
-          <RepRow
-            key={rep.id}
-            rep={rep}
-            score={repScores.find((r) => r.repId === rep.id)?.compositeScore ?? null}
-            onChange={(r) => onUpdateRep(rep.id, r)}
-            onRemove={() => onRemoveRep(rep.id)}
-          />
-        ))}
-        <button
-          type="button"
-          onClick={onAddRep}
-          className="flex items-center gap-1 rounded-lg border border-dashed border-border px-2 py-1 text-xs text-text-tertiary active:opacity-70"
-        >
-          <Plus size={12} /> Add time
-        </button>
-      </div>
+      {(set.reps.length > 0 || editing) && (
+        <div className="mt-3 space-y-1.5 border-t border-border/40 pt-3">
+          {set.reps.map((rep) => (
+            <RepRow
+              key={rep.id}
+              rep={rep}
+              score={repScores.find((r) => r.repId === rep.id)?.compositeScore ?? null}
+              onChange={(r) => onUpdateRep(rep.id, r)}
+              onRemove={editing ? () => onRemoveRep(rep.id) : undefined}
+            />
+          ))}
+          {editing && (
+            <button
+              type="button"
+              onClick={onAddRep}
+              className="flex items-center gap-1 rounded-lg border border-dashed border-border px-2 py-1 text-xs text-text-tertiary active:opacity-70"
+            >
+              <Plus size={12} /> Add time
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -631,14 +673,14 @@ function ContextPanel({
             placeholder="7.5"
           />
         </Field>
-        <Field label="Body weight (kg)">
+        <Field label="Body weight (lbs)">
           <Input
             inputMode="decimal"
-            value={practice.bodyWeightKg ?? ""}
+            value={practice.bodyWeightLbs ?? ""}
             onChange={(e) =>
-              onChange({ bodyWeightKg: e.target.value === "" ? null : Number(e.target.value) })
+              onChange({ bodyWeightLbs: e.target.value === "" ? null : Number(e.target.value) })
             }
-            placeholder="70"
+            placeholder="155"
           />
         </Field>
         <Field label="Overall RPE (1-10)">

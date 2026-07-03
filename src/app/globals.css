@@ -19,6 +19,7 @@
 
   --danger: #e5654f;
   --warning: #d1a534;
+  --success: #3fa681;
   --dot-meal: #cf8465;
   --dot-sleep: #7c74bd;
 
@@ -44,6 +45,7 @@
 
   --color-danger: var(--danger);
   --color-warning: var(--warning);
+  --color-success: var(--success);
   --color-dot-meal: var(--dot-meal);
   --color-dot-sleep: var(--dot-sleep);
 

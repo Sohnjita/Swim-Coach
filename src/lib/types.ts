@@ -14,6 +14,9 @@ export type Course = "SCY" | "SCM" | "LCM" | "Other";
 
 export type SetType = "aerobic" | "threshold" | "sprint" | "lactate";
 
+/** A practice's overall energy-system focus — set by the swimmer, not derived. */
+export type EnergyFocus = SetType | "other";
+
 export type StartType = "push" | "dive";
 
 export type SuitType = "practice" | "tech";
@@ -79,10 +82,11 @@ export interface Practice {
   date: string; // ISO date (yyyy-mm-dd)
   course: Course;
   customPoolLengthMeters: number | null; // set when course === "Other"
+  focus: EnergyFocus; // swimmer-chosen, not auto-classified from set types
   sets: PracticeSet[];
   // Context factors, logged once per practice
   sleepHours: number | null;
-  bodyWeightKg: number | null;
+  bodyWeightLbs: number | null;
   gymThatDay: boolean;
   overallRpe: number | null;
   notes?: string;

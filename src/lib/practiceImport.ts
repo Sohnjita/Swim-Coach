@@ -6,9 +6,10 @@ import { newId } from "./db";
 import { expandLinesToReps } from "./lineTree";
 import { isNotationSetLine, parseNotationText } from "./notationParser";
 import { todayISO } from "./format";
-import type { Course, Practice, PracticeSet, SetType } from "./types";
+import type { Course, EnergyFocus, Practice, PracticeSet, SetType } from "./types";
 
 const SET_TYPES: SetType[] = ["aerobic", "threshold", "sprint", "lactate"];
+const FOCUS_VALUES: EnergyFocus[] = ["aerobic", "threshold", "sprint", "lactate", "other"];
 const COURSES: Course[] = ["SCY", "SCM", "LCM"];
 
 function parseHeaderLine(raw: string): { key: string; value: string } | null {
@@ -44,10 +45,12 @@ export function parsePracticeText(text: string): Practice {
   const courseRaw = (headers.course || "").toUpperCase();
   const course: Course = COURSES.includes(courseRaw as Course) ? (courseRaw as Course) : "SCY";
   const sleepHours = headers.sleep ? Number(headers.sleep) : null;
-  const bodyWeightKg = headers.weight ? Number(headers.weight) : null;
+  const bodyWeightLbs = headers.weight ? Number(headers.weight) : null;
   const overallRpe = headers.rpe ? Number(headers.rpe) : null;
   const gymThatDay = /^(y|yes|true)$/i.test(headers.gym ?? "");
   const notes = headers.notes || undefined;
+  const focusRaw = (headers.focus || "").toLowerCase() as EnergyFocus;
+  const focus: EnergyFocus = FOCUS_VALUES.includes(focusRaw) ? focusRaw : "aerobic";
 
   const chunks: string[][] = [];
   let current: string[] = [];
@@ -89,9 +92,10 @@ export function parsePracticeText(text: string): Practice {
     date,
     course,
     customPoolLengthMeters: null,
+    focus,
     sets,
     sleepHours,
-    bodyWeightKg,
+    bodyWeightLbs,
     gymThatDay,
     overallRpe,
     notes,

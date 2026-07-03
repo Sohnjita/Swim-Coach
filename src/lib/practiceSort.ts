@@ -1,8 +1,7 @@
-import type { Practice } from "./types";
+import type { EnergyFocus, Practice, ScoringConfig } from "./types";
 import type { RepHistoryEntry } from "./scoring";
 import { scorePractice } from "./scoring";
-import type { ScoringConfig } from "./types";
-import { practiceEnergyFocus, practiceTotalDistance, type EnergyFocus } from "./practiceHelpers";
+import { practiceTotalDistance } from "./practiceHelpers";
 
 export type SortKey = "date" | "score" | "yardage" | "type";
 export interface SortSpec {
@@ -48,7 +47,7 @@ export function sortPractices(
   for (const p of practices) {
     scoreById.set(p.id, scorePractice(p, history, config).practiceScore ?? -1);
     distanceById.set(p.id, practiceTotalDistance(p));
-    typeById.set(p.id, TYPE_RANK[practiceEnergyFocus(p)]);
+    typeById.set(p.id, TYPE_RANK[p.focus ?? "aerobic"]);
   }
 
   function valueFor(p: Practice, key: SortKey): number {
