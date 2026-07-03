@@ -27,15 +27,12 @@ export default function AppShell({ children }: { children: ReactNode }) {
   return (
     <>
       <div className="pool-edge-top" />
-      <div
-        className="fixed inset-x-0 z-20 flags-divider"
-        style={{ top: "calc(var(--safe-top) + 4px)" }}
-      />
+      <div className="fixed inset-x-0 z-20 flags-divider" style={{ top: navHeight }} />
 
       <div
         className="fixed inset-x-0 z-[1] overflow-hidden"
         style={{
-          top: "calc(var(--safe-top) + 4px + 16px)",
+          top: navHeight + FLAGS_HEIGHT,
           bottom: navHeight + FLAGS_HEIGHT,
         }}
       >
@@ -53,7 +50,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
         style={{ paddingBottom: "var(--safe-bottom)" }}
       >
         <div className="mx-auto flex max-w-md items-center py-2">
-          {TABS.map(({ href, label }) => {
+          {TABS.map(({ href, label, icon: Icon }) => {
             const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
             return (
               <button
@@ -65,12 +62,12 @@ export default function AppShell({ children }: { children: ReactNode }) {
                 className="flex flex-1 flex-col items-center gap-1"
               >
                 <span className="flex h-9 w-9 items-center justify-center">
-                  <span className={cn("nav-mark", active && "nav-mark-active")} />
+                  <Icon size={22} strokeWidth={2} className={cn("nav-icon", active && "nav-icon-active")} />
                 </span>
                 <span
                   className={cn(
                     "text-[10px] leading-none",
-                    active ? "font-medium text-accent" : "text-text-tertiary",
+                    active ? "font-medium text-white" : "text-text-tertiary",
                   )}
                 >
                   {label}

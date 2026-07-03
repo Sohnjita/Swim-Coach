@@ -104,28 +104,16 @@ body {
   pointer-events: none;
 }
 
-/* Resting tab mark: a sliver blended into the lane-line background, as if
-   it were sitting just under the water's surface. */
-.nav-mark {
-  width: 3px;
-  height: 14px;
-  border-radius: 999px;
-  background-color: rgba(180, 210, 235, 0.28);
-  transition:
-    width 0.22s ease,
-    height 0.22s ease,
-    background-color 0.22s ease,
-    box-shadow 0.22s ease;
+/* Resting tab icon: dim, blended into the underwater background. */
+.nav-icon {
+  color: rgba(180, 210, 235, 0.35);
+  transition: color 0.22s ease, filter 0.22s ease;
 }
 
-/* Active tab mark: illuminated and grown to fill the button. */
-.nav-mark-active {
-  width: 5px;
-  height: 28px;
-  background-image: linear-gradient(180deg, var(--accent), var(--accent-strong));
-  box-shadow:
-    0 0 12px 2px rgba(74, 122, 168, 0.65),
-    0 0 4px rgba(255, 255, 255, 0.5);
+/* Active tab icon: illuminated white, as if lit from the surface. */
+.nav-icon-active {
+  color: #ffffff;
+  filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.85)) drop-shadow(0 0 2px rgba(255, 255, 255, 0.6));
 }
 
 /* Lane-line "buoys": periodic tick marks down each background lane line. */
