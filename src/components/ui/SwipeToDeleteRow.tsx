@@ -55,8 +55,19 @@ export function SwipeToDeleteRow({
     setOffset((cur) => (cur < -REVEAL_WIDTH / 2 ? -REVEAL_WIDTH : 0));
   }
 
+  const transition = dragging ? "none" : "transform 0.2s ease";
+
   return (
     <div className="relative overflow-hidden">
+      {/*
+        Rests just past the right edge (left: 100%) rather than "underneath"
+        the row at right: 0 — so at offset 0 it's genuinely outside the
+        clipped area, not just painted over. That way the row itself needs
+        no background of its own to mask it, and the page's water gradient/
+        lane lines keep showing through the row exactly as everywhere else.
+        Sharing the same transform keeps it flush against the row's trailing
+        edge at every point in the drag, not just fully open.
+      */}
       <button
         type="button"
         onClick={() => {
@@ -64,8 +75,8 @@ export function SwipeToDeleteRow({
           setOffset(0);
         }}
         aria-label="Delete practice"
-        className="absolute inset-y-0 right-0 flex items-center justify-center bg-danger/20 text-danger active:bg-danger/30"
-        style={{ width: REVEAL_WIDTH }}
+        className="absolute inset-y-0 flex items-center justify-center bg-danger/20 text-danger active:bg-danger/30"
+        style={{ left: "100%", width: REVEAL_WIDTH, transform: `translateX(${offset}px)`, transition }}
       >
         <Trash2 size={18} />
       </button>
@@ -74,12 +85,8 @@ export function SwipeToDeleteRow({
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
-        className="relative bg-bg"
-        style={{
-          transform: `translateX(${offset}px)`,
-          transition: dragging ? "none" : "transform 0.2s ease",
-          touchAction: "pan-y",
-        }}
+        className="relative"
+        style={{ transform: `translateX(${offset}px)`, transition, touchAction: "pan-y" }}
       >
         {children}
       </div>
