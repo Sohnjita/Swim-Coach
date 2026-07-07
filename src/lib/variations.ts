@@ -30,7 +30,7 @@ export function suggestSetVariation(
   shape: RepShape,
   history: RepHistoryEntry[],
 ): SetVariationSuggestion {
-  const key = repComparisonKey(shape.distance, shape.stroke, shape.course);
+  const key = repComparisonKey(shape.distance, shape.stroke, shape.course, null);
   const matches = history
     .filter((h) => h.key === key)
     .sort((a, b) => a.date.localeCompare(b.date));

@@ -5,17 +5,18 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import { ArrowLeft, Check, ChevronDown, Copy, Trash2 } from "lucide-react";
-import { db } from "@/lib/db";
+import { db, SCORING_CONFIG_ID } from "@/lib/db";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
-import { NotationDocument } from "@/components/practice/NotationDocument";
+import { NotationDocument, type ProjectionContext } from "@/components/practice/NotationDocument";
 import {
   appendItemToRound,
   formatLines,
   removeLineById,
   updateLineById,
 } from "@/lib/lineTree";
+import { buildRepHistory, DEFAULT_SCORING_CONFIG } from "@/lib/scoring";
 import type { Course, PracticeLine, SetTemplate, SetType } from "@/lib/types";
 
 const SET_TYPES: SetType[] = ["aerobic", "threshold", "sprint", "lactate", "technique"];
@@ -54,6 +55,10 @@ function SetTemplateDetail({
   const [editingLabel, setEditingLabel] = useState(startEditingLabel);
 
   const template = useLiveQuery(() => db.setTemplates.get(id), [id]);
+  const allPractices = useLiveQuery(() => db.practices.toArray(), []) ?? [];
+  const scoringConfig =
+    useLiveQuery(() => db.scoringConfig.get(SCORING_CONFIG_ID), []) ??
+    DEFAULT_SCORING_CONFIG;
 
   if (template === undefined) return null;
   if (!template) {
@@ -65,6 +70,11 @@ function SetTemplateDetail({
   }
 
   const currentTemplate: SetTemplate = template;
+  const projectionContext: ProjectionContext = {
+    history: buildRepHistory(allPractices, scoringConfig),
+    config: scoringConfig,
+    course: currentTemplate.course,
+  };
 
   async function save(next: SetTemplate) {
     await db.setTemplates.put(next);
@@ -166,6 +176,7 @@ function SetTemplateDetail({
           onUpdateLine={updateLine}
           onDeleteLine={deleteLine}
           onAddLine={addLine}
+          projectionContext={projectionContext}
         />
       </div>
     </div>

@@ -5,6 +5,7 @@
 import { db } from "./db";
 import type {
   CalendarEvent,
+  Meet,
   MeetResult,
   Practice,
   QualifyingStandard,
@@ -23,18 +24,20 @@ export interface BackupPayload {
   calendarEvents: CalendarEvent[];
   standards: QualifyingStandard[];
   meetResults: MeetResult[];
+  meets: Meet[];
   profile: SwimmerProfile[];
   scoringConfig: ScoringConfig[];
 }
 
 export async function buildBackup(): Promise<BackupPayload> {
-  const [practices, setTemplates, calendarEvents, standards, meetResults, profile, scoringConfig] =
+  const [practices, setTemplates, calendarEvents, standards, meetResults, meets, profile, scoringConfig] =
     await Promise.all([
       db.practices.toArray(),
       db.setTemplates.toArray(),
       db.calendarEvents.toArray(),
       db.standards.toArray(),
       db.meetResults.toArray(),
+      db.meets.toArray(),
       db.profile.toArray(),
       db.scoringConfig.toArray(),
     ]);
@@ -46,6 +49,7 @@ export async function buildBackup(): Promise<BackupPayload> {
     calendarEvents,
     standards,
     meetResults,
+    meets,
     profile,
     scoringConfig,
   };
@@ -72,6 +76,7 @@ function isBackupPayload(value: unknown): value is BackupPayload {
     Array.isArray(v.calendarEvents) &&
     Array.isArray(v.standards) &&
     Array.isArray(v.meetResults) &&
+    Array.isArray(v.meets) &&
     Array.isArray(v.profile) &&
     Array.isArray(v.scoringConfig)
   );
@@ -98,6 +103,7 @@ export async function restoreBackup(payload: BackupPayload): Promise<void> {
       db.calendarEvents,
       db.standards,
       db.meetResults,
+      db.meets,
       db.profile,
       db.scoringConfig,
     ],
@@ -108,6 +114,7 @@ export async function restoreBackup(payload: BackupPayload): Promise<void> {
         db.calendarEvents.bulkPut(payload.calendarEvents),
         db.standards.bulkPut(payload.standards),
         db.meetResults.bulkPut(payload.meetResults),
+        db.meets.bulkPut(payload.meets),
         db.profile.bulkPut(payload.profile),
         db.scoringConfig.bulkPut(payload.scoringConfig),
       ]);

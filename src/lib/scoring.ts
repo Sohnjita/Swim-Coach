@@ -11,6 +11,7 @@ import type {
 import {
   DEFAULT_SCM_TO_LCM_PERCENT,
   DEFAULT_SCY_TO_LCM_PERCENT,
+  fromLcmEquivalent,
   normalizeToBaseline,
   toLcmEquivalent,
 } from "./conversions";
@@ -32,6 +33,14 @@ export const DEFAULT_SCORING_CONFIG: ScoringConfig = {
 const PACE_SENSITIVITY = 10; // points lost per 1% slower than best-equivalent
 const EFFICIENCY_SENSITIVITY = 8; // points lost per 1% worse SWOLF than best
 const EFFORT_RPE_SENSITIVITY = 5; // points shifted per RPE point away from 5
+// Seconds of comparison-time credit given per second of rest *less* than
+// this rep shape's historical average (or, for projections, per second
+// less rest than a historical entry's own interval) — a rough stand-in for
+// "swimming a similar time on a tighter interval is a harder effort."
+const INTERVAL_TIME_CREDIT = 0.03;
+// Recency weighting for goal projections: each older sample (by date, most
+// recent first) counts for this much less than the one before it.
+const RECENCY_DECAY = 0.8;
 
 const SET_TYPE_WEIGHT: Record<SetType, number> = {
   lactate: 1.2,
@@ -50,14 +59,20 @@ function isRaceEvent(distance: number, stroke: Stroke): stroke is "breast" {
   return stroke === "breast" && (distance === 50 || distance === 100);
 }
 
-/** Grouping key used to find "what's the best I've done at this exact rep shape". */
+/**
+ * Grouping key used to find "what's the best I've done at this exact rep
+ * shape" — distance/stroke/course plus the line's descriptor tag (e.g.
+ * "best avg", "descend 1-4"), so history comparisons don't pool an all-out
+ * effort together with an easy swim of the same distance/stroke.
+ */
 export function repComparisonKey(
   distance: number,
   stroke: Stroke,
   course: Course,
+  tag: string | null,
 ): string {
-  if (isRaceEvent(distance, stroke)) return `race-${distance}-breast`;
-  return `${distance}-${stroke}-${course}`;
+  const base = isRaceEvent(distance, stroke) ? `race-${distance}-breast` : `${distance}-${stroke}-${course}`;
+  return tag ? `${base}::${tag}` : base;
 }
 
 /** Normalizes a rep's raw time to a comparable baseline (practice suit, push, LCM if a race event). */
@@ -78,6 +93,8 @@ export function normalizedRepTime(
 export interface RepHistoryEntry {
   key: string;
   normalizedTime: number;
+  time: number; // raw logged seconds, for interval/rest comparisons
+  intervalSeconds: number | null;
   swolf: number | null; // time + strokeCount, same units as logged
   date: string;
 }
@@ -93,8 +110,15 @@ export interface ScoredRep {
 
 /**
  * Scores a single rep against the swimmer's own history at that same
- * distance/stroke/course shape (or LCM-equivalent history for the two goal
- * race events). `history` should exclude the rep being scored.
+ * distance/stroke/course/descriptor-tag shape (or LCM-equivalent history
+ * for the two goal race events). `history` should exclude the rep being
+ * scored.
+ *
+ * Pace is interval-aware: a rep swum on a materially tighter interval than
+ * this shape's historical average gets a small time credit before being
+ * compared to the historical best, and a rep on a more generous interval
+ * gets a small penalty — so a slightly slower time on a much harder
+ * interval doesn't register as a flat regression.
  */
 export function scoreRep(
   rep: Rep,
@@ -114,13 +138,29 @@ export function scoreRep(
     };
   }
 
-  const key = repComparisonKey(rep.distance, rep.stroke, course);
+  const tag = rep.notes ?? null;
+  const key = repComparisonKey(rep.distance, rep.stroke, course, tag);
   const keyHistory = history.filter((h) => h.key === key);
 
   const bestTime = keyHistory.length
     ? Math.min(normalizedTime, ...keyHistory.map((h) => h.normalizedTime))
     : normalizedTime;
-  const percentSlower = ((normalizedTime - bestTime) / bestTime) * 100;
+
+  let comparisonTime = normalizedTime;
+  if (rep.restIntervalSeconds !== null && rep.time !== null) {
+    const historicalRests = keyHistory
+      .filter((h) => h.intervalSeconds !== null)
+      .map((h) => h.intervalSeconds! - h.time);
+    if (historicalRests.length > 0) {
+      const avgHistoricalRest =
+        historicalRests.reduce((sum, r) => sum + r, 0) / historicalRests.length;
+      const restObtained = rep.restIntervalSeconds - rep.time;
+      const restDelta = avgHistoricalRest - restObtained;
+      comparisonTime = normalizedTime - restDelta * INTERVAL_TIME_CREDIT;
+    }
+  }
+
+  const percentSlower = ((comparisonTime - bestTime) / bestTime) * 100;
   const paceScore = clamp(100 - percentSlower * PACE_SENSITIVITY);
 
   let efficiencyScore: number | null = null;
@@ -229,8 +269,10 @@ export function buildRepHistory(
             ? rep.time + rep.strokeCount
             : null;
         entries.push({
-          key: repComparisonKey(rep.distance, rep.stroke, practice.course),
+          key: repComparisonKey(rep.distance, rep.stroke, practice.course, rep.notes ?? null),
           normalizedTime,
+          time: rep.time!,
+          intervalSeconds: rep.restIntervalSeconds,
           swolf,
           date: practice.date,
         });
@@ -238,6 +280,85 @@ export function buildRepHistory(
     }
   }
   return entries;
+}
+
+export interface RepShape {
+  distance: number;
+  stroke: Stroke;
+  course: Course;
+  tag: string | null;
+  intervalSeconds: number | null;
+}
+
+export interface RepProjection {
+  projectedSeconds: number | null;
+  sampleCount: number;
+  bestSeconds: number | null;
+  mostRecentDate: string | null;
+}
+
+/**
+ * On-demand "what would I likely go" projection for a rep shape you haven't
+ * swum yet — e.g. while writing a set's notation, before practice. Pulls
+ * every historical rep sharing the same distance/stroke/course/tag
+ * signature, adjusts each to the *target* interval using the same rest-
+ * credit heuristic as scoreRep (so a history of :55 and 1:05 swims still
+ * informs a 1:00 projection, not just exact-interval matches), then blends
+ * the best adjusted time with a recency-weighted average.
+ */
+export function projectRepTime(
+  shape: RepShape,
+  history: RepHistoryEntry[],
+  config: ScoringConfig,
+): RepProjection {
+  const key = repComparisonKey(shape.distance, shape.stroke, shape.course, shape.tag);
+  const matches = history
+    .filter((h) => h.key === key)
+    .sort((a, b) => b.date.localeCompare(a.date));
+
+  if (matches.length === 0) {
+    return { projectedSeconds: null, sampleCount: 0, bestSeconds: null, mostRecentDate: null };
+  }
+
+  // Base the projection on each match's baseline-normalized time (already
+  // suit/start-adjusted when history was built), then layer the same
+  // rest-credit heuristic scoreRep uses, aimed at the target interval.
+  const adjusted = matches.map((m) => {
+    if (shape.intervalSeconds === null || m.intervalSeconds === null) return m.normalizedTime;
+    const restDeltaToTarget = m.intervalSeconds - shape.intervalSeconds;
+    return m.normalizedTime + restDeltaToTarget * INTERVAL_TIME_CREDIT;
+  });
+
+  const bestAdjusted = Math.min(...adjusted);
+  let weightedSum = 0;
+  let totalWeight = 0;
+  adjusted.forEach((time, i) => {
+    const weight = RECENCY_DECAY ** i;
+    weightedSum += time * weight;
+    totalWeight += weight;
+  });
+  const recencyWeightedAvg = weightedSum / totalWeight;
+  const projectedInComparisonSpace = 0.5 * bestAdjusted + 0.5 * recencyWeightedAvg;
+
+  // The two legacy race events pool history across courses via an
+  // LCM-equivalent comparison space (see normalizedRepTime) — convert the
+  // blended projection back down to the shape's actual course so it reads
+  // as a real time on that pool, not an inflated LCM-equivalent number.
+  const projectedSeconds = isRaceEvent(shape.distance, shape.stroke)
+    ? fromLcmEquivalent(
+        projectedInComparisonSpace,
+        shape.course,
+        shape.distance === 50 ? "50 Breast" : "100 Breast",
+        config,
+      )
+    : projectedInComparisonSpace;
+
+  return {
+    projectedSeconds,
+    sampleCount: matches.length,
+    bestSeconds: Math.min(...matches.map((m) => m.time)),
+    mostRecentDate: matches[0].date,
+  };
 }
 
 export interface GoalPrediction {

@@ -139,6 +139,15 @@ export function RepRow({
               className="mt-1 h-9 w-full rounded-lg border border-border bg-bg-elevated px-2 text-[13px] text-text-primary outline-none focus:border-accent"
             />
           </label>
+          <label className="col-span-2 text-xs text-text-tertiary">
+            Tag (e.g. &quot;best avg&quot;) — groups this rep with similar-effort history for scoring
+            <input
+              value={rep.notes ?? ""}
+              onChange={(e) => onChange({ ...rep, notes: e.target.value || undefined })}
+              placeholder="best avg"
+              className="mt-1 h-9 w-full rounded-lg border border-border bg-bg-elevated px-2 text-[13px] text-text-primary outline-none focus:border-accent"
+            />
+          </label>
           <div className="col-span-2 flex items-center justify-between gap-2">
             <span className="text-xs text-text-tertiary">Start</span>
             <Segmented

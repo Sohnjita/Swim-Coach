@@ -21,13 +21,13 @@ import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { ScoreRing } from "@/components/ui/ScoreRing";
 import { SwipeToDeleteRow } from "@/components/ui/SwipeToDeleteRow";
-import { Field, Input, Select } from "@/components/ui/Field";
-import { Segmented } from "@/components/ui/Segmented";
+import { Field, Input } from "@/components/ui/Field";
+import { MeetResultForm } from "@/components/practice/MeetResultForm";
 import { buildRepHistory, DEFAULT_SCORING_CONFIG, scorePractice } from "@/lib/scoring";
 import { newPractice, practiceSummaryLine } from "@/lib/practiceHelpers";
-import { formatTime, parseTime } from "@/lib/conversions";
+import { formatTime } from "@/lib/conversions";
 import { formatDateLabel, todayISO } from "@/lib/format";
-import { SWIM_EVENTS, eventLabel, type SwimEvent } from "@/lib/events";
+import { eventLabel } from "@/lib/events";
 import { cn } from "@/lib/cn";
 import {
   SORT_LABEL,
@@ -36,14 +36,14 @@ import {
   type SortKey,
   type SortSpec,
 } from "@/lib/practiceSort";
-import type { CalendarEvent, Course, MeetResult, Practice, SuitType } from "@/lib/types";
+import type { CalendarEvent, Meet, MeetResult, Practice } from "@/lib/types";
 
 const SORT_KEYS: SortKey[] = ["date", "score", "yardage", "type"];
-const COURSES: { label: string; value: Course }[] = [
-  { label: "SCY", value: "SCY" },
-  { label: "SCM", value: "SCM" },
-  { label: "LCM", value: "LCM" },
-];
+
+const ROUND_LABEL: Record<string, string> = {
+  prelim: "Prelim",
+  final: "Final",
+};
 
 type FilterType = "all" | "practice" | "meet" | "lift";
 const FILTERS: { label: string; value: FilterType }[] = [
@@ -54,46 +54,46 @@ const FILTERS: { label: string; value: FilterType }[] = [
 ];
 
 interface MeetGroup {
-  id: string;
-  date: string;
-  meetName: string;
+  meet: Meet;
   results: MeetResult[];
 }
 
-function groupMeetResults(results: MeetResult[]): MeetGroup[] {
-  const byKey = new Map<string, MeetResult[]>();
+function groupMeetResults(results: MeetResult[], meets: Meet[]): MeetGroup[] {
+  const meetsById = new Map(meets.map((m) => [m.id, m]));
+  const byMeetId = new Map<string, MeetResult[]>();
   for (const r of results) {
-    const key = `${r.date}__${r.meetName}`;
-    const list = byKey.get(key) ?? [];
+    const list = byMeetId.get(r.meetId) ?? [];
     list.push(r);
-    byKey.set(key, list);
+    byMeetId.set(r.meetId, list);
   }
-  return [...byKey.entries()].map(([id, group]) => ({
-    id,
-    date: group[0].date,
-    meetName: group[0].meetName,
-    results: group,
-  }));
+  const groups: MeetGroup[] = [];
+  for (const [meetId, group] of byMeetId) {
+    const meet = meetsById.get(meetId);
+    if (!meet) continue;
+    groups.push({ meet, results: [...group].sort((a, b) => a.date.localeCompare(b.date)) });
+  }
+  return groups;
 }
 
 export default function PracticesPage() {
   const router = useRouter();
   const practices = useLiveQuery(() => db.practices.toArray(), []) ?? [];
   const meetResults = useLiveQuery(() => db.meetResults.toArray(), []) ?? [];
+  const meets = useLiveQuery(() => db.meets.toArray(), []) ?? [];
   const calendarEvents = useLiveQuery(() => db.calendarEvents.toArray(), []) ?? [];
   const lifts = calendarEvents.filter((e) => e.type === "lift");
 
   const scoringConfig =
     useLiveQuery(() => db.scoringConfig.get(SCORING_CONFIG_ID), []) ??
     DEFAULT_SCORING_CONFIG;
-  const [sortSpec, setSortSpec] = useState<SortSpec | null>(null);
+  const [sortSpec, setSortSpec] = useState<SortSpec | null>({ key: "date", dir: "desc" });
   const [filter, setFilter] = useState<FilterType>("all");
   const [showAddMenu, setShowAddMenu] = useState(false);
 
   const history = buildRepHistory(practices, scoringConfig);
   const sortedPractices = sortPractices(practices, sortSpec, history, scoringConfig);
-  const meetGroups = groupMeetResults(meetResults).sort((a, b) =>
-    b.date.localeCompare(a.date),
+  const meetGroups = groupMeetResults(meetResults, meets).sort((a, b) =>
+    b.meet.startDate.localeCompare(a.meet.startDate),
   );
   const sortedLifts = [...lifts].sort((a, b) => b.date.localeCompare(a.date));
 
@@ -110,8 +110,9 @@ export default function PracticesPage() {
   }
 
   async function handleDeleteMeetGroup(group: MeetGroup) {
-    if (!confirm(`Delete all ${group.results.length} result(s) from ${group.meetName}?`)) return;
+    if (!confirm(`Delete all ${group.results.length} result(s) from ${group.meet.name}?`)) return;
     await Promise.all(group.results.map((r) => db.meetResults.delete(r.id)));
+    await db.meets.delete(group.meet.id);
   }
 
   async function handleDeleteLift(id: string) {
@@ -221,7 +222,7 @@ export default function PracticesPage() {
               {showMeets &&
                 meetGroups.map((group) => (
                   <MeetGroupRow
-                    key={group.id}
+                    key={group.meet.id}
                     group={group}
                     onDelete={() => handleDeleteMeetGroup(group)}
                   />
@@ -272,6 +273,30 @@ function PracticeRow({
 
 function MeetGroupRow({ group, onDelete }: { group: MeetGroup; onDelete: () => void }) {
   const [expanded, setExpanded] = useState(false);
+  const [editingName, setEditingName] = useState(false);
+  const [nameDraft, setNameDraft] = useState(group.meet.name);
+  const [editingDates, setEditingDates] = useState(false);
+  const [startDraft, setStartDraft] = useState(group.meet.startDate);
+  const [endDraft, setEndDraft] = useState(group.meet.endDate);
+  const [showAddEvent, setShowAddEvent] = useState(false);
+  const [editingResultId, setEditingResultId] = useState<string | null>(null);
+
+  const multiDay = group.meet.startDate !== group.meet.endDate;
+
+  function saveName() {
+    const trimmed = nameDraft.trim();
+    setEditingName(false);
+    if (trimmed && trimmed !== group.meet.name) {
+      db.meets.update(group.meet.id, { name: trimmed });
+    }
+  }
+
+  function saveDates() {
+    setEditingDates(false);
+    const start = startDraft <= endDraft ? startDraft : endDraft;
+    const end = startDraft <= endDraft ? endDraft : startDraft;
+    db.meets.update(group.meet.id, { startDate: start, endDate: end });
+  }
 
   return (
     <SwipeToDeleteRow onClick={() => setExpanded((v) => !v)} onDelete={onDelete}>
@@ -281,9 +306,13 @@ function MeetGroupRow({ group, onDelete }: { group: MeetGroup; onDelete: () => v
             <Trophy size={20} />
           </div>
           <div className="flex-1">
-            <p className="text-sm font-medium text-text-primary">{formatDateLabel(group.date)}</p>
+            <p className="text-sm font-medium text-text-primary">
+              {multiDay
+                ? `${formatDateLabel(group.meet.startDate)} – ${formatDateLabel(group.meet.endDate)}`
+                : formatDateLabel(group.meet.startDate)}
+            </p>
             <p className="text-xs text-text-tertiary">
-              {group.meetName} · {group.results.length} event
+              {group.meet.name} · {group.results.length} event
               {group.results.length === 1 ? "" : "s"}
             </p>
           </div>
@@ -295,17 +324,125 @@ function MeetGroupRow({ group, onDelete }: { group: MeetGroup; onDelete: () => v
             )}
           />
         </div>
+
         {expanded && (
-          <ul className="mt-2 space-y-1 pl-[60px]">
-            {group.results.map((r) => (
-              <li key={r.id} className="flex items-center justify-between text-xs">
-                <span className="text-text-secondary">{eventLabel(r.event, r.course)}</span>
-                <span className="tabular-nums text-text-tertiary">
-                  {formatTime(r.timeSeconds)} · {r.course}
-                </span>
-              </li>
-            ))}
-          </ul>
+          // Interactive edit controls live inside the expanded panel, so
+          // stop pointerdown here from reaching SwipeToDeleteRow's own
+          // gesture handler — otherwise every tap inside also toggles
+          // (and re-collapses) this row via its outer onClick.
+          <div onPointerDown={(e) => e.stopPropagation()} className="mt-2 space-y-3 pl-[60px]">
+            <div className="flex flex-wrap items-center gap-3">
+              {editingName ? (
+                <input
+                  autoFocus
+                  value={nameDraft}
+                  onChange={(e) => setNameDraft(e.target.value)}
+                  onBlur={saveName}
+                  className="h-7 min-w-0 flex-1 rounded border border-border bg-bg-elevated-2 px-1.5 text-xs text-text-primary outline-none focus:border-accent"
+                />
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setNameDraft(group.meet.name);
+                    setEditingName(true);
+                  }}
+                  className="text-xs text-accent active:opacity-70"
+                >
+                  Edit name
+                </button>
+              )}
+              {editingDates ? (
+                <div className="flex items-center gap-1">
+                  <input
+                    type="date"
+                    autoFocus
+                    value={startDraft}
+                    onChange={(e) => setStartDraft(e.target.value)}
+                    onBlur={saveDates}
+                    className="h-7 rounded border border-border bg-bg-elevated-2 px-1 text-xs text-text-primary outline-none focus:border-accent"
+                  />
+                  <span className="text-text-tertiary">–</span>
+                  <input
+                    type="date"
+                    value={endDraft}
+                    onChange={(e) => setEndDraft(e.target.value)}
+                    onBlur={saveDates}
+                    className="h-7 rounded border border-border bg-bg-elevated-2 px-1 text-xs text-text-primary outline-none focus:border-accent"
+                  />
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStartDraft(group.meet.startDate);
+                    setEndDraft(group.meet.endDate);
+                    setEditingDates(true);
+                  }}
+                  className="text-xs text-accent active:opacity-70"
+                >
+                  Edit dates
+                </button>
+              )}
+            </div>
+
+            <ul className="space-y-2">
+              {group.results.map((r) =>
+                editingResultId === r.id ? (
+                  <li key={r.id}>
+                    <MeetResultForm
+                      meetId={group.meet.id}
+                      meet={group.meet}
+                      initial={r}
+                      onCancel={() => setEditingResultId(null)}
+                      onDone={() => setEditingResultId(null)}
+                    />
+                  </li>
+                ) : (
+                  <li key={r.id} className="flex items-center justify-between text-xs">
+                    <button
+                      type="button"
+                      onClick={() => setEditingResultId(r.id)}
+                      className="min-w-0 flex-1 truncate text-left text-text-secondary active:opacity-70"
+                    >
+                      {eventLabel(r.event, r.course)}
+                      {r.round !== "timed-final" && ` · ${ROUND_LABEL[r.round]}`}
+                    </button>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <span className="tabular-nums text-text-tertiary">
+                        {formatTime(r.timeSeconds)} · {r.course}
+                        {r.strokeCount !== null && ` · ${r.strokeCount} strk`}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => db.meetResults.delete(r.id)}
+                        className="text-text-tertiary active:opacity-70"
+                      >
+                        &times;
+                      </button>
+                    </div>
+                  </li>
+                ),
+              )}
+            </ul>
+
+            {showAddEvent ? (
+              <MeetResultForm
+                meetId={group.meet.id}
+                meet={group.meet}
+                onCancel={() => setShowAddEvent(false)}
+                onDone={() => setShowAddEvent(false)}
+              />
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowAddEvent(true)}
+                className="flex items-center gap-1 rounded-lg border border-dashed border-border px-2 py-1 text-xs text-text-tertiary active:opacity-70"
+              >
+                <Plus size={12} /> Add event
+              </button>
+            )}
+          </div>
         )}
       </div>
     </SwipeToDeleteRow>
@@ -349,7 +486,7 @@ function QuickAddPanel({
   const [mode, setMode] = useState<"menu" | "meet" | "lift">("menu");
 
   if (mode === "meet") {
-    return <MeetQuickForm onCancel={() => setMode("menu")} onDone={onDone} />;
+    return <MeetResultForm onCancel={() => setMode("menu")} onDone={onDone} />;
   }
   if (mode === "lift") {
     return <LiftQuickForm onCancel={() => setMode("menu")} onDone={onDone} />;
@@ -378,80 +515,6 @@ function QuickAddPanel({
       >
         <Dumbbell size={12} /> Lift
       </button>
-    </div>
-  );
-}
-
-function MeetQuickForm({ onCancel, onDone }: { onCancel: () => void; onDone: () => void }) {
-  const [event, setEvent] = useState<SwimEvent>(SWIM_EVENTS[0]);
-  const [course, setCourse] = useState<Course>("SCY");
-  const [date, setDate] = useState(todayISO());
-  const [meetName, setMeetName] = useState("");
-  const [timeText, setTimeText] = useState("");
-  const [suit, setSuit] = useState<SuitType>("tech");
-
-  async function save() {
-    const timeSeconds = parseTime(timeText);
-    if (timeSeconds === null || !meetName.trim()) return;
-    const result: MeetResult = {
-      id: newId(),
-      date,
-      meetName: meetName.trim(),
-      event,
-      course,
-      timeSeconds,
-      suit,
-      createdAt: new Date().toISOString(),
-    };
-    await db.meetResults.put(result);
-    onDone();
-  }
-
-  return (
-    <div className="space-y-2 rounded-lg border border-dashed border-border p-2">
-      <Field label="Event">
-        <Select value={event} onChange={(e) => setEvent(e.target.value as SwimEvent)}>
-          {SWIM_EVENTS.map((ev) => (
-            <option key={ev} value={ev}>
-              {eventLabel(ev, course)}
-            </option>
-          ))}
-        </Select>
-      </Field>
-      <Segmented options={COURSES} value={course} onChange={setCourse} />
-      <div className="grid grid-cols-2 gap-2">
-        <Field label="Date">
-          <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-        </Field>
-        <Field label="Time">
-          <Input
-            placeholder="1:02.35"
-            value={timeText}
-            onChange={(e) => setTimeText(e.target.value)}
-          />
-        </Field>
-      </div>
-      <Input
-        placeholder="Meet name"
-        value={meetName}
-        onChange={(e) => setMeetName(e.target.value)}
-      />
-      <Segmented
-        options={[
-          { label: "Tech suit", value: "tech" },
-          { label: "Practice suit", value: "practice" },
-        ]}
-        value={suit}
-        onChange={setSuit}
-      />
-      <div className="flex justify-end gap-2">
-        <Button variant="secondary" size="sm" onClick={onCancel}>
-          Cancel
-        </Button>
-        <Button size="sm" onClick={save}>
-          Save
-        </Button>
-      </div>
     </div>
   );
 }

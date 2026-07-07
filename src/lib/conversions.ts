@@ -43,6 +43,21 @@ export function toLcmEquivalent(
   return timeSeconds * (1 + percent / 100);
 }
 
+/** Inverse of toLcmEquivalent — converts an LCM-equivalent time back down to a target course. */
+export function fromLcmEquivalent(
+  lcmTimeSeconds: number,
+  course: Course,
+  event: CutEvent,
+  config: ScoringConfig,
+): number {
+  if (course === "LCM") return lcmTimeSeconds;
+  const percent =
+    course === "SCY"
+      ? config.scyToLcmPercent[event]
+      : config.scmToLcmPercent[event];
+  return lcmTimeSeconds / (1 + percent / 100);
+}
+
 /** Adjusts a time to a common "practice suit, push start" baseline for fair comparison. */
 export function normalizeToBaseline(
   timeSeconds: number,

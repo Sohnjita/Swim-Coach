@@ -138,13 +138,25 @@ export interface QualifyingStandard {
   verified: boolean; // false for seeded starter cuts pending confirmation
 }
 
+export interface Meet {
+  id: string;
+  name: string;
+  startDate: string; // ISO date
+  endDate: string; // ISO date; equals startDate for single-day meets
+  createdAt: string;
+}
+
+export type MeetRound = "timed-final" | "prelim" | "final";
+
 export interface MeetResult {
   id: string;
-  date: string;
-  meetName: string;
+  meetId: string;
+  date: string; // which day of the meet this swim happened
   event: SwimEvent;
   course: Course;
   timeSeconds: number;
+  strokeCount: number | null;
+  round: MeetRound;
   suit: SuitType;
   notes?: string;
   createdAt: string;

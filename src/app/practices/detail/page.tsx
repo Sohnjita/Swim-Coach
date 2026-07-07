@@ -1,20 +1,10 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
-import {
-  ArrowLeft,
-  Brackets,
-  Check,
-  ChevronDown,
-  Copy,
-  Pencil,
-  Plus,
-  Trash2,
-  Type as TypeIcon,
-} from "lucide-react";
+import { ArrowLeft, Check, ChevronDown, Copy, Pencil, Plus, Trash2 } from "lucide-react";
 import { db, newId, SCORING_CONFIG_ID } from "@/lib/db";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { CardTitle } from "@/components/ui/Card";
@@ -23,14 +13,12 @@ import { ScoreRing } from "@/components/ui/ScoreRing";
 import { Badge } from "@/components/ui/Badge";
 import { Field, Input } from "@/components/ui/Field";
 import { Segmented } from "@/components/ui/Segmented";
-import { NotationDocument } from "@/components/practice/NotationDocument";
+import { NotationDocument, type ProjectionContext } from "@/components/practice/NotationDocument";
 import { RepRow } from "@/components/practice/RepRow";
 import {
   appendItemToRound,
   countReps,
   formatLines,
-  makeRoundLine,
-  makeTextLine,
   removeLineById,
   totalDistance,
   updateLineById,
@@ -93,6 +81,10 @@ function PracticeDetail({ id, startInEditMode }: { id: string; startInEditMode: 
   // Freshly-created practices (routed here with ?new=1) open straight into
   // edit mode so there's something to write; otherwise start in view mode.
   const [editing, setEditing] = useState(startInEditMode);
+  // A freshly-added blank block should open straight into title editing —
+  // tracks which block id just got inserted so BlockPanel can seed its
+  // editingLabel state from it, then clears itself once consumed.
+  const [justAddedSetId, setJustAddedSetId] = useState<string | null>(null);
 
   const practice = useLiveQuery(() => db.practices.get(id), [id]);
   const allPractices = useLiveQuery(() => db.practices.toArray(), []);
@@ -114,6 +106,11 @@ function PracticeDetail({ id, startInEditMode }: { id: string; startInEditMode: 
 
   const history = buildRepHistory(allPractices, scoringConfig);
   const currentPractice: Practice = practice;
+  const projectionContext: ProjectionContext = {
+    history,
+    config: scoringConfig,
+    course: currentPractice.course,
+  };
 
   async function save(next: Practice) {
     await db.practices.put({ ...next, updatedAt: new Date().toISOString() });
@@ -186,6 +183,7 @@ function PracticeDetail({ id, startInEditMode }: { id: string; startInEditMode: 
       rpe: null,
       start: "push",
       suit: "practice",
+      notes: lastRepsLine?.tag,
     };
     const sets = currentPractice.sets.map((s) =>
       s.id === setId ? { ...s, reps: [...s.reps, rep] } : s,
@@ -231,31 +229,13 @@ function PracticeDetail({ id, startInEditMode }: { id: string; startInEditMode: 
   }
 
   function insertBlockAfter(index: number) {
-    insertBlockAt(index, emptyPracticeSet());
+    const block = emptyPracticeSet();
+    insertBlockAt(index, block);
+    setJustAddedSetId(block.id);
   }
 
   function insertTemplateAfter(index: number, template: SetTemplate) {
     insertBlockAt(index, makeSetFromTemplate(template));
-  }
-
-  function insertNoteAfter(index: number) {
-    insertBlockAt(index, {
-      id: newId(),
-      type: "aerobic",
-      label: "",
-      lines: [makeTextLine("New note")],
-      reps: [],
-    });
-  }
-
-  function insertRoundAfter(index: number) {
-    insertBlockAt(index, {
-      id: newId(),
-      type: "aerobic",
-      label: "",
-      lines: [makeRoundLine(2)],
-      reps: [],
-    });
   }
 
   return (
@@ -343,6 +323,9 @@ function PracticeDetail({ id, startInEditMode }: { id: string; startInEditMode: 
                   setScore={setScore}
                   editing={editing}
                   canRemove={practice.sets.length > 1}
+                  projectionContext={projectionContext}
+                  autoFocusLabel={set.id === justAddedSetId}
+                  onAutoFocusConsumed={() => setJustAddedSetId(null)}
                   onLabelChange={(label) => updateBlockLabel(set.id, label)}
                   onCycleType={() => cycleBlockType(set.id)}
                   onRemove={() => removeBlock(set.id)}
@@ -359,8 +342,6 @@ function PracticeDetail({ id, startInEditMode }: { id: string; startInEditMode: 
                     templates={templates ?? []}
                     onAddBlock={() => insertBlockAfter(i)}
                     onAddTemplate={(template) => insertTemplateAfter(i, template)}
-                    onAddNote={() => insertNoteAfter(i)}
-                    onAddRound={() => insertRoundAfter(i)}
                   />
                 )}
               </div>
@@ -444,6 +425,9 @@ function BlockPanel({
   setScore,
   editing,
   canRemove,
+  projectionContext,
+  autoFocusLabel,
+  onAutoFocusConsumed,
   onLabelChange,
   onCycleType,
   onRemove,
@@ -459,6 +443,9 @@ function BlockPanel({
   setScore: number | null;
   editing: boolean;
   canRemove: boolean;
+  projectionContext: ProjectionContext;
+  autoFocusLabel: boolean;
+  onAutoFocusConsumed: () => void;
   onLabelChange: (label: string) => void;
   onCycleType: () => void;
   onRemove: () => void;
@@ -470,8 +457,14 @@ function BlockPanel({
   onRemoveRep: (repId: string) => void;
   repScores: { repId: string; compositeScore: number | null }[];
 }) {
-  const [editingLabel, setEditingLabel] = useState(false);
+  const [editingLabel, setEditingLabel] = useState(autoFocusLabel);
   const [labelDraft, setLabelDraft] = useState(set.label);
+
+  useEffect(() => {
+    if (autoFocusLabel) onAutoFocusConsumed();
+    // Only ever meant to fire once, right after this block mounts.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div>
@@ -530,6 +523,7 @@ function BlockPanel({
         onUpdateLine={editing ? onUpdateLine : undefined}
         onDeleteLine={editing ? onDeleteLine : undefined}
         onAddLine={editing ? onAddLine : undefined}
+        projectionContext={editing ? projectionContext : undefined}
       />
 
       {(set.reps.length > 0 || editing) && (
@@ -562,14 +556,10 @@ function BlockActionsBar({
   templates,
   onAddBlock,
   onAddTemplate,
-  onAddNote,
-  onAddRound,
 }: {
   templates: SetTemplate[];
   onAddBlock: () => void;
   onAddTemplate: (template: SetTemplate) => void;
-  onAddNote: () => void;
-  onAddRound: () => void;
 }) {
   const [showPicker, setShowPicker] = useState(false);
 
@@ -589,20 +579,6 @@ function BlockActionsBar({
           className="flex items-center gap-1 rounded-lg border border-dashed border-border px-2 py-1 text-xs text-text-tertiary active:opacity-70"
         >
           <Plus size={12} /> Set
-        </button>
-        <button
-          type="button"
-          onClick={onAddNote}
-          className="flex items-center gap-1 rounded-lg border border-dashed border-border px-2 py-1 text-xs text-text-tertiary active:opacity-70"
-        >
-          <TypeIcon size={12} /> Note
-        </button>
-        <button
-          type="button"
-          onClick={onAddRound}
-          className="flex items-center gap-1 rounded-lg border border-dashed border-border px-2 py-1 text-xs text-text-tertiary active:opacity-70"
-        >
-          <Brackets size={12} /> Round
         </button>
       </div>
 

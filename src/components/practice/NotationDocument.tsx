@@ -1,11 +1,29 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Plus, X } from "lucide-react";
-import type { LineModifier, PracticeLine, RepGroupLine, RoundLine, Stroke, TextLine } from "@/lib/types";
-import { formatLine, makeRepGroupLine } from "@/lib/lineTree";
-import { formatInterval, parseInterval } from "@/lib/conversions";
+import { Check, Plus, Sparkles, X } from "lucide-react";
+import type {
+  Course,
+  LineModifier,
+  PracticeLine,
+  RepGroupLine,
+  RoundLine,
+  ScoringConfig,
+  Stroke,
+  TextLine,
+} from "@/lib/types";
+import { formatLine, makeRepGroupLine, makeRoundLine, makeTextLine } from "@/lib/lineTree";
+import { formatInterval, formatTime, parseInterval } from "@/lib/conversions";
+import { formatDateLabel } from "@/lib/format";
+import { projectRepTime, type RepHistoryEntry } from "@/lib/scoring";
 import { cn } from "@/lib/cn";
+
+/** Bundles what's needed for the line editor's on-demand time projection. Omit to hide it. */
+export interface ProjectionContext {
+  history: RepHistoryEntry[];
+  config: ScoringConfig;
+  course: Course;
+}
 
 interface Row {
   id: string;
@@ -37,12 +55,15 @@ export function NotationDocument({
   onDeleteLine,
   onUpdateLine,
   onAddLine,
+  projectionContext,
 }: {
   lines: PracticeLine[];
   onDeleteLine?: (id: string) => void;
   onUpdateLine?: (id: string, next: PracticeLine) => void;
   /** Appends a new line. `parentRoundId` targets a round's items instead of the top level. */
   onAddLine?: (line: PracticeLine, parentRoundId?: string) => void;
+  /** Enables the "Project" time estimate in the reps-line editor. */
+  projectionContext?: ProjectionContext;
 }) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const rows = flattenForDisplay(lines);
@@ -61,6 +82,7 @@ export function NotationDocument({
               {isEditing ? (
                 <LineRowEditor
                   row={row}
+                  projectionContext={projectionContext}
                   onCancel={() => setEditingId(null)}
                   onSave={(next) => {
                     onUpdateLine!(row.id, next);
@@ -96,36 +118,81 @@ export function NotationDocument({
               <AddLineRow
                 depth={row.depth + 1}
                 onAdd={(line) => onAddLine(line, row.id)}
+                projectionContext={projectionContext}
               />
             )}
           </div>
         );
       })}
-      {onAddLine && <AddLineRow depth={0} onAdd={(line) => onAddLine(line)} />}
+      {onAddLine && (
+        <AddLineRow depth={0} onAdd={(line) => onAddLine(line)} projectionContext={projectionContext} />
+      )}
     </div>
   );
 }
 
-/** Inline "+" under the last line: adds another line item in place, same as before. */
+type DraftKind = "reps" | "text" | "round";
+
+/**
+ * Inline "+" under the last line: offers Line / Note / Round, then opens
+ * the matching draft editor and adds it as a new line in place — notes and
+ * rounds are lines within the block being written, not separate blocks.
+ */
 function AddLineRow({
   depth,
   onAdd,
+  projectionContext,
 }: {
   depth: number;
   onAdd: (line: PracticeLine) => void;
+  projectionContext?: ProjectionContext;
 }) {
-  const [draft, setDraft] = useState<RepGroupLine | null>(null);
+  const [draftKind, setDraftKind] = useState<DraftKind | null>(null);
 
-  if (draft) {
+  if (draftKind === "reps") {
+    const draft = makeRepGroupLine({});
     const row: Row = { id: draft.id, depth, kind: "reps", line: draft, text: "" };
     return (
       <div style={{ paddingLeft: depth * 16 }}>
         <LineRowEditor
           row={row}
-          onCancel={() => setDraft(null)}
+          projectionContext={projectionContext}
+          onCancel={() => setDraftKind(null)}
           onSave={(next) => {
             onAdd(next);
-            setDraft(null);
+            setDraftKind(null);
+          }}
+        />
+      </div>
+    );
+  }
+  if (draftKind === "text") {
+    const draft = makeTextLine("");
+    const row: Row = { id: draft.id, depth, kind: "text", line: draft, text: "" };
+    return (
+      <div style={{ paddingLeft: depth * 16 }}>
+        <LineRowEditor
+          row={row}
+          onCancel={() => setDraftKind(null)}
+          onSave={(next) => {
+            onAdd(next);
+            setDraftKind(null);
+          }}
+        />
+      </div>
+    );
+  }
+  if (draftKind === "round") {
+    const draft = makeRoundLine(2);
+    const row: Row = { id: draft.id, depth, kind: "round-open", line: draft, text: "" };
+    return (
+      <div style={{ paddingLeft: depth * 16 }}>
+        <LineRowEditor
+          row={row}
+          onCancel={() => setDraftKind(null)}
+          onSave={(next) => {
+            onAdd(next);
+            setDraftKind(null);
           }}
         />
       </div>
@@ -133,14 +200,28 @@ function AddLineRow({
   }
 
   return (
-    <div style={{ paddingLeft: depth * 16 }} className="py-1">
+    <div style={{ paddingLeft: depth * 16 }} className="flex items-center gap-1 py-1">
       <button
         type="button"
-        onClick={() => setDraft(makeRepGroupLine({}))}
+        onClick={() => setDraftKind("reps")}
         aria-label="Add line"
         className="rounded-lg border border-dashed border-border p-1 text-text-tertiary active:opacity-70"
       >
         <Plus size={12} />
+      </button>
+      <button
+        type="button"
+        onClick={() => setDraftKind("text")}
+        className="rounded-lg border border-dashed border-border px-1.5 py-1 text-[11px] text-text-tertiary active:opacity-70"
+      >
+        Note
+      </button>
+      <button
+        type="button"
+        onClick={() => setDraftKind("round")}
+        className="rounded-lg border border-dashed border-border px-1.5 py-1 text-[11px] text-text-tertiary active:opacity-70"
+      >
+        Round
       </button>
     </div>
   );
@@ -211,10 +292,12 @@ function LineRowEditor({
   row,
   onSave,
   onCancel,
+  projectionContext,
 }: {
   row: Row;
   onSave: (next: PracticeLine) => void;
   onCancel: () => void;
+  projectionContext?: ProjectionContext;
 }) {
   if (row.kind === "round-open") {
     return <RoundLineEditor round={row.line as RoundLine} onSave={onSave} onCancel={onCancel} />;
@@ -222,7 +305,14 @@ function LineRowEditor({
   if (row.kind === "text") {
     return <TextLineEditor line={row.line as TextLine} onSave={onSave} onCancel={onCancel} />;
   }
-  return <RepLineEditor line={row.line as RepGroupLine} onSave={onSave} onCancel={onCancel} />;
+  return (
+    <RepLineEditor
+      line={row.line as RepGroupLine}
+      onSave={onSave}
+      onCancel={onCancel}
+      projectionContext={projectionContext}
+    />
+  );
 }
 
 function RoundLineEditor({
@@ -234,20 +324,23 @@ function RoundLineEditor({
   onSave: (next: PracticeLine) => void;
   onCancel: () => void;
 }) {
-  const [multiplier, setMultiplier] = useState(round.multiplier);
+  const [multiplierText, setMultiplierText] = useState(String(round.multiplier));
   return (
     <div className="flex items-center gap-2 rounded-lg border border-accent/40 bg-bg-elevated-2 px-2 py-1">
       <span className="text-xs text-text-tertiary">Repeat</span>
       <input
         inputMode="numeric"
         autoFocus
-        value={multiplier}
-        onChange={(e) => setMultiplier(Number(e.target.value) || 1)}
+        value={multiplierText}
+        onChange={(e) => setMultiplierText(e.target.value)}
         className="h-8 w-14 rounded-lg border border-border bg-bg-elevated text-center text-sm text-text-primary outline-none focus:border-accent"
       />
       <span className="text-xs text-text-tertiary">x[</span>
       <div className="flex-1" />
-      <EditorActions onSave={() => onSave({ ...round, multiplier })} onCancel={onCancel} />
+      <EditorActions
+        onSave={() => onSave({ ...round, multiplier: Math.max(1, Number(multiplierText) || 1) })}
+        onCancel={onCancel}
+      />
     </div>
   );
 }
@@ -282,17 +375,41 @@ function RepLineEditor({
   line,
   onSave,
   onCancel,
+  projectionContext,
 }: {
   line: RepGroupLine;
   onSave: (next: PracticeLine) => void;
   onCancel: () => void;
+  projectionContext?: ProjectionContext;
 }) {
-  const [count, setCount] = useState(line.count);
-  const [distance, setDistance] = useState(line.distance);
-  const [intervalText, setIntervalText] = useState(formatInterval(line.intervalSeconds));
+  const [countText, setCountText] = useState(String(line.count));
+  const [distanceText, setDistanceText] = useState(String(line.distance));
+  const [intervalText, setIntervalText] = useState(
+    line.intervalSeconds === null ? "" : formatInterval(line.intervalSeconds),
+  );
   const [stroke, setStroke] = useState<Stroke | null>(line.stroke ?? null);
   const [modifier, setModifier] = useState<LineModifier>(line.modifier);
   const [tag, setTag] = useState(line.tag ?? "");
+  const [projection, setProjection] = useState<ReturnType<typeof projectRepTime> | "idle">("idle");
+
+  const count = Math.max(0, Number(countText) || 0);
+
+  function requestProjection() {
+    if (!projectionContext) return;
+    setProjection(
+      projectRepTime(
+        {
+          distance: Math.max(0, Number(distanceText) || 0),
+          stroke: stroke ?? "free",
+          course: projectionContext.course,
+          tag: tag.trim() || null,
+          intervalSeconds: parseInterval(intervalText),
+        },
+        projectionContext.history,
+        projectionContext.config,
+      ),
+    );
+  }
 
   return (
     <div className="space-y-2 rounded-xl border border-accent/40 bg-bg-elevated-2 p-2">
@@ -300,15 +417,15 @@ function RepLineEditor({
         <input
           inputMode="numeric"
           autoFocus
-          value={count}
-          onChange={(e) => setCount(Number(e.target.value) || 0)}
+          value={countText}
+          onChange={(e) => setCountText(e.target.value)}
           className="h-8 w-10 rounded-lg border border-border bg-bg-elevated text-center text-sm text-text-primary outline-none focus:border-accent"
         />
         <span className="text-text-tertiary">x</span>
         <input
           inputMode="numeric"
-          value={distance}
-          onChange={(e) => setDistance(Number(e.target.value) || 0)}
+          value={distanceText}
+          onChange={(e) => setDistanceText(e.target.value)}
           className="h-8 w-14 rounded-lg border border-border bg-bg-elevated text-center text-sm text-text-primary outline-none focus:border-accent"
         />
         <span className="text-xs text-text-tertiary">on</span>
@@ -355,7 +472,7 @@ function RepLineEditor({
             onSave({
               ...line,
               count,
-              distance,
+              distance: Math.max(0, Number(distanceText) || 0),
               intervalSeconds: parseInterval(intervalText),
               stroke: stroke ?? undefined,
               modifier,
@@ -365,6 +482,29 @@ function RepLineEditor({
           onCancel={onCancel}
         />
       </div>
+      {projectionContext && (
+        <div className="border-t border-border/40 pt-2">
+          {projection === "idle" ? (
+            <button
+              type="button"
+              onClick={requestProjection}
+              className="flex items-center gap-1 text-xs text-accent active:opacity-70"
+            >
+              <Sparkles size={11} /> Project time
+            </button>
+          ) : projection.sampleCount === 0 ? (
+            <p className="text-xs text-text-tertiary">No similar reps logged yet.</p>
+          ) : (
+            <p className="text-xs text-text-tertiary">
+              <span className="tabular-nums text-text-secondary">
+                ~{formatTime(projection.projectedSeconds)}
+              </span>{" "}
+              · {projection.sampleCount} similar rep{projection.sampleCount === 1 ? "" : "s"}
+              {projection.mostRecentDate && `, most recent ${formatDateLabel(projection.mostRecentDate)}`}
+            </p>
+          )}
+        </div>
+      )}
     </div>
   );
 }

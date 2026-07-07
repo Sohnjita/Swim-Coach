@@ -2,6 +2,7 @@ import Dexie, { type Table } from "dexie";
 import { DEFAULT_SCORING_CONFIG } from "./scoring";
 import type {
   CalendarEvent,
+  Meet,
   MeetResult,
   Practice,
   QualifyingStandard,
@@ -16,6 +17,7 @@ class SwimCoachDB extends Dexie {
   calendarEvents!: Table<CalendarEvent, string>;
   standards!: Table<QualifyingStandard, string>;
   meetResults!: Table<MeetResult, string>;
+  meets!: Table<Meet, string>;
   profile!: Table<SwimmerProfile, string>;
   scoringConfig!: Table<ScoringConfig, string>;
 
@@ -27,6 +29,16 @@ class SwimCoachDB extends Dexie {
       calendarEvents: "id, date, type, linkedPracticeId",
       standards: "id, event, course, gender",
       meetResults: "id, date, event, course",
+      profile: "id",
+      scoringConfig: "id",
+    });
+    this.version(2).stores({
+      practices: "id, date, course",
+      setTemplates: "id, type, course",
+      calendarEvents: "id, date, type, linkedPracticeId",
+      standards: "id, event, course, gender",
+      meetResults: "id, date, event, course, meetId",
+      meets: "id, name, startDate, endDate",
       profile: "id",
       scoringConfig: "id",
     });

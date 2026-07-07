@@ -4,14 +4,14 @@ import { useState } from "react";
 import Link from "next/link";
 import { useLiveQuery } from "dexie-react-hooks";
 import { Plus, Settings2 } from "lucide-react";
-import { db, DEFAULT_PROFILE, newId, PROFILE_ID } from "@/lib/db";
+import { db, DEFAULT_PROFILE, PROFILE_ID } from "@/lib/db";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Segmented } from "@/components/ui/Segmented";
-import { Field, Input } from "@/components/ui/Field";
-import { formatTime, parseTime } from "@/lib/conversions";
-import { formatDateLabel, todayISO } from "@/lib/format";
+import { MeetResultForm } from "@/components/practice/MeetResultForm";
+import { formatTime } from "@/lib/conversions";
+import { formatDateLabel } from "@/lib/format";
 import { gapToCut } from "@/lib/standards";
 import { SWIM_EVENTS, eventLabel, type SwimEvent } from "@/lib/events";
 import {
@@ -21,7 +21,12 @@ import {
   standardsForEvent,
   type BestPracticeTime,
 } from "@/lib/timesData";
-import type { Course, MeetResult, Practice, QualifyingStandard, SuitType } from "@/lib/types";
+import type { Course, Meet, MeetResult, Practice, QualifyingStandard } from "@/lib/types";
+
+const ROUND_LABEL: Record<string, string> = {
+  prelim: "Prelim",
+  final: "Final",
+};
 
 const COURSES: { label: string; value: Course }[] = [
   { label: "SCY", value: "SCY" },
@@ -43,7 +48,9 @@ export default function TimesPage() {
   const results = useLiveQuery(() => db.meetResults.toArray(), []) ?? [];
   const standards = useLiveQuery(() => db.standards.toArray(), []) ?? [];
   const practices = useLiveQuery(() => db.practices.toArray(), []) ?? [];
+  const meets = useLiveQuery(() => db.meets.toArray(), []) ?? [];
   const profile = useLiveQuery(() => db.profile.get(PROFILE_ID), []) ?? DEFAULT_PROFILE;
+  const meetsById = new Map(meets.map((m) => [m.id, m]));
 
   return (
     <div>
@@ -74,6 +81,7 @@ export default function TimesPage() {
               results={results}
               standards={standards}
               practices={practices}
+              meetsById={meetsById}
             />
           ))}
         </div>
@@ -91,6 +99,7 @@ function EventRow({
   results,
   standards,
   practices,
+  meetsById,
 }: {
   event: SwimEvent;
   course: Course;
@@ -100,6 +109,7 @@ function EventRow({
   results: MeetResult[];
   standards: QualifyingStandard[];
   practices: Practice[];
+  meetsById: Map<string, Meet>;
 }) {
   const [showAddResult, setShowAddResult] = useState(false);
   const [showAllResults, setShowAllResults] = useState(false);
@@ -136,7 +146,9 @@ function EventRow({
               <>
                 <p className="text-lg tabular-nums text-text-primary">{formatTime(pb.timeSeconds)}</p>
                 <p className="text-xs text-text-tertiary">
-                  {formatDateLabel(pb.date)} · {pb.meetName}
+                  {formatDateLabel(pb.date)} · {meetsById.get(pb.meetId)?.name ?? "Meet"}
+                  {pb.round !== "timed-final" && ` · ${ROUND_LABEL[pb.round]}`}
+                  {pb.strokeCount !== null && ` · ${pb.strokeCount} strokes`}
                 </p>
                 {achieved.length > 0 && (
                   <div className="mt-2 flex flex-wrap justify-center gap-1">
@@ -211,7 +223,8 @@ function EventRow({
                   {eventResults.map((r) => (
                     <div key={r.id} className="flex items-center justify-between text-xs">
                       <span className="text-text-tertiary">
-                        {formatDateLabel(r.date)} · {r.meetName}
+                        {formatDateLabel(r.date)} · {meetsById.get(r.meetId)?.name ?? "Meet"}
+                        {r.round !== "timed-final" && ` · ${ROUND_LABEL[r.round]}`}
                       </span>
                       <div className="flex items-center gap-2">
                         <span className="tabular-nums text-text-secondary">
@@ -234,7 +247,12 @@ function EventRow({
 
           <div className="flex justify-center">
             {showAddResult ? (
-              <AddResultForm event={event} course={course} onDone={() => setShowAddResult(false)} />
+              <MeetResultForm
+                defaultEvent={event}
+                defaultCourse={course}
+                onCancel={() => setShowAddResult(false)}
+                onDone={() => setShowAddResult(false)}
+              />
             ) : (
               <button
                 type="button"
@@ -258,76 +276,6 @@ function PracticeBestRow({ best }: { best: BestPracticeTime }) {
       <span className="tabular-nums text-text-secondary">
         {formatTime(best.timeSeconds)} · {formatDateLabel(best.date)}
       </span>
-    </div>
-  );
-}
-
-function AddResultForm({
-  event,
-  course,
-  onDone,
-}: {
-  event: SwimEvent;
-  course: Course;
-  onDone: () => void;
-}) {
-  const [date, setDate] = useState(todayISO());
-  const [meetName, setMeetName] = useState("");
-  const [timeText, setTimeText] = useState("");
-  const [suit, setSuit] = useState<SuitType>("tech");
-
-  async function save() {
-    const timeSeconds = parseTime(timeText);
-    if (timeSeconds === null || !meetName.trim()) return;
-    const result: MeetResult = {
-      id: newId(),
-      date,
-      meetName: meetName.trim(),
-      event,
-      course,
-      timeSeconds,
-      suit,
-      createdAt: new Date().toISOString(),
-    };
-    await db.meetResults.put(result);
-    onDone();
-  }
-
-  return (
-    <div className="w-full space-y-2 rounded-lg border border-dashed border-border p-2 text-left">
-      <div className="grid grid-cols-2 gap-2">
-        <Field label="Date">
-          <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-        </Field>
-        <Field label="Time">
-          <Input
-            placeholder="1:02.35"
-            value={timeText}
-            onChange={(e) => setTimeText(e.target.value)}
-          />
-        </Field>
-      </div>
-      <Input
-        placeholder="Meet name"
-        value={meetName}
-        onChange={(e) => setMeetName(e.target.value)}
-      />
-      <Segmented
-        options={[
-          { label: "Practice suit", value: "practice" as SuitType },
-          { label: "Tech suit", value: "tech" as SuitType },
-        ]}
-        value={suit}
-        onChange={setSuit}
-      />
-      <div className="flex gap-2">
-        <Button variant="secondary" size="sm" className="flex-1" onClick={onDone}>
-          Cancel
-        </Button>
-        <Button size="sm" className="flex-1" onClick={save}>
-          Save
-        </Button>
-      </div>
     </div>
   );
 }
