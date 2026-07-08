@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { ChevronDown, ChevronUp, Trash2 } from "lucide-react";
 import type { Rep, StartType, Stroke, SuitType } from "@/lib/types";
-import { formatTime, parseTime } from "@/lib/conversions";
+import { formatInterval, formatTime, parseInterval, parseTime } from "@/lib/conversions";
 import { Segmented } from "@/components/ui/Segmented";
 import { Select } from "@/components/ui/Field";
 
@@ -30,6 +30,9 @@ export function RepRow({
 }) {
   const [expanded, setExpanded] = useState(false);
   const [timeText, setTimeText] = useState(rep.time !== null ? formatTime(rep.time) : "");
+  const [intervalText, setIntervalText] = useState(
+    rep.restIntervalSeconds !== null ? formatInterval(rep.restIntervalSeconds) : "",
+  );
 
   return (
     <div className="rounded-xl border border-border bg-bg-elevated-2/60">
@@ -107,17 +110,12 @@ export function RepRow({
             </Select>
           </label>
           <label className="text-xs text-text-tertiary">
-            Interval (sec)
+            Interval (m:ss)
             <input
-              inputMode="numeric"
-              value={rep.restIntervalSeconds ?? ""}
-              onChange={(e) =>
-                onChange({
-                  ...rep,
-                  restIntervalSeconds:
-                    e.target.value === "" ? null : Number(e.target.value),
-                })
-              }
+              placeholder="1:30"
+              value={intervalText}
+              onChange={(e) => setIntervalText(e.target.value)}
+              onBlur={() => onChange({ ...rep, restIntervalSeconds: parseInterval(intervalText) })}
               className="mt-1 h-9 w-full rounded-lg border border-border bg-bg-elevated px-2 text-[13px] text-text-primary outline-none focus:border-accent"
             />
           </label>

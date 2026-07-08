@@ -12,8 +12,8 @@ Built as an installable, iOS-friendly PWA. All data is stored locally on-device
   interval, suit, start type, pool course, RPE) organized into aerobic /
   threshold / sprint / lactate sets.
 - **Practice scoring** — every rep and practice gets a transparent 0–100 score
-  from pace-vs-personal-best, stroke efficiency (SWOLF-style), and
-  effort-adjusted RPE. Weights are tunable in Settings.
+  from pace-vs-personal-best, stroke-count efficiency, and effort-adjusted
+  RPE. Weights are tunable in Settings.
 - **Set library** — save reusable sets and get a data-driven interval/pace
   suggestion based on your recent trend at that same rep shape.
 - **Calendar** — plan swims, lifts, meals, sleep, and meets.

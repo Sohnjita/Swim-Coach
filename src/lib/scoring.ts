@@ -31,7 +31,13 @@ export const DEFAULT_SCORING_CONFIG: ScoringConfig = {
 // Internal sensitivity constants (not user-tunable — the weights/taper/suit
 // numbers above are the meaningful knobs exposed in Settings).
 const PACE_SENSITIVITY = 4; // points lost per 1% slower than best-equivalent
-const EFFICIENCY_SENSITIVITY = 8; // points lost per 1% worse SWOLF than best
+// Points lost per 1% more strokes than a rep's own recent best stroke count.
+// Kept well below PACE_SENSITIVITY so stroke-count noise nudges the
+// composite score rather than swinging it — time stays the primary factor.
+// Because this is a *percent* delta, a fixed 1-stroke difference already
+// moves the score more on a short rep (a bigger share of a small stroke
+// count) than on a long one, without any extra distance-specific logic.
+const EFFICIENCY_SENSITIVITY = 2;
 const EFFORT_RPE_SENSITIVITY = 5; // points shifted per RPE point away from 5
 // Seconds of comparison-time credit given per second of rest *less* than
 // this rep shape's historical average (or, for projections, per second
@@ -107,7 +113,7 @@ export interface RepHistoryEntry {
   normalizedTime: number;
   time: number; // raw logged seconds, for interval/rest comparisons
   intervalSeconds: number | null;
-  swolf: number | null; // time + strokeCount, same units as logged
+  strokeCount: number | null;
   date: string;
 }
 
@@ -183,18 +189,15 @@ export function scoreRep(
   const paceScore = clamp(100 - percentSlower * PACE_SENSITIVITY);
 
   let efficiencyScore: number | null = null;
-  if (rep.strokeCount !== null) {
-    const swolf = rep.time !== null ? rep.time + rep.strokeCount : null;
-    const swolfHistory = keyHistory
-      .map((h) => h.swolf)
-      .filter((s): s is number => s !== null);
-    if (swolf !== null) {
-      const bestSwolf = swolfHistory.length
-        ? Math.min(swolf, ...swolfHistory)
-        : swolf;
-      const percentWorse = ((swolf - bestSwolf) / bestSwolf) * 100;
-      efficiencyScore = clamp(100 - percentWorse * EFFICIENCY_SENSITIVITY);
-    }
+  if (rep.strokeCount !== null && rep.strokeCount > 0) {
+    const strokeHistory = recentHistory
+      .map((h) => h.strokeCount)
+      .filter((s): s is number => s !== null && s > 0);
+    const bestStrokeCount = strokeHistory.length
+      ? Math.min(rep.strokeCount, ...strokeHistory)
+      : rep.strokeCount;
+    const percentWorse = ((rep.strokeCount - bestStrokeCount) / bestStrokeCount) * 100;
+    efficiencyScore = clamp(100 - percentWorse * EFFICIENCY_SENSITIVITY);
   }
 
   let effortScore: number | null = null;
@@ -307,16 +310,12 @@ export function buildRepHistory(
       for (const rep of set.reps) {
         const normalizedTime = normalizedRepTime(rep, practice.course, config);
         if (normalizedTime === null) continue;
-        const swolf =
-          rep.time !== null && rep.strokeCount !== null
-            ? rep.time + rep.strokeCount
-            : null;
         entries.push({
           key: repComparisonKey(rep.distance, rep.stroke, practice.course, set.type),
           normalizedTime,
           time: rep.time!,
           intervalSeconds: rep.restIntervalSeconds,
-          swolf,
+          strokeCount: rep.strokeCount,
           date: practice.date,
         });
       }

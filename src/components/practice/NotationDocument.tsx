@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Check, ChevronDown, ChevronUp, Plus, Sparkles, X } from "lucide-react";
+import { useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { Check, Plus, Sparkles, X } from "lucide-react";
 import type {
   Course,
   LineModifier,
@@ -81,11 +81,11 @@ export function NotationDocument({
       {rows.length === 0 && !onAddLine && (
         <p className="text-sm text-text-tertiary">No lines yet.</p>
       )}
-      {rows.map((row, i) => {
+      {rows.map((row) => {
         const editable = Boolean(onUpdateLine) && row.line !== undefined;
         const isEditing = editable && editingId === row.id;
         return (
-          <div key={`${row.id}-${i}`}>
+          <div key={`${row.id}-${row.kind}`}>
             <div style={{ paddingLeft: row.depth * 16 }}>
               {isEditing ? (
                 <LineRowEditor
@@ -98,48 +98,29 @@ export function NotationDocument({
                   }}
                 />
               ) : (
-                <div className="group flex items-center justify-between gap-1 py-0.5">
-                  <button
-                    type="button"
-                    disabled={!editable}
-                    onClick={() => editable && setEditingId(row.id)}
+                <DraggableRow
+                  onTap={() => editable && setEditingId(row.id)}
+                  onMove={onMoveLine && row.kind !== "round-close" ? (delta) => onMoveLine(row.id, delta) : undefined}
+                >
+                  <span
                     className={cn(
                       "min-w-0 flex-1 truncate text-left",
                       editable && "rounded active:bg-bg-elevated-2",
                     )}
                   >
                     {row.text}
-                  </button>
-                  {onMoveLine && row.kind !== "round-close" && (
-                    <>
-                      <button
-                        type="button"
-                        aria-label="Move up"
-                        onClick={() => onMoveLine(row.id, -1)}
-                        className="p-1 text-text-tertiary opacity-60 active:opacity-100"
-                      >
-                        <ChevronUp size={13} />
-                      </button>
-                      <button
-                        type="button"
-                        aria-label="Move down"
-                        onClick={() => onMoveLine(row.id, 1)}
-                        className="p-1 text-text-tertiary opacity-60 active:opacity-100"
-                      >
-                        <ChevronDown size={13} />
-                      </button>
-                    </>
-                  )}
+                  </span>
                   {onDeleteLine && (
                     <button
                       type="button"
+                      onPointerDown={(e) => e.stopPropagation()}
                       onClick={() => onDeleteLine(row.id)}
                       className="p-1 text-text-tertiary opacity-60 active:opacity-100"
                     >
                       <X size={13} />
                     </button>
                   )}
-                </div>
+                </DraggableRow>
               )}
             </div>
             {row.kind === "round-close" && onAddLine && (
@@ -160,6 +141,128 @@ export function NotationDocument({
           projectionContext={projectionContext}
         />
       )}
+    </div>
+  );
+}
+
+const LONG_PRESS_MS = 450;
+const DRAG_SLOP = 6;
+
+interface DragState {
+  startX: number;
+  startY: number;
+  thresholdY: number;
+  rowHeight: number;
+  moved: boolean;
+  dragging: boolean;
+  timer: ReturnType<typeof setTimeout> | null;
+}
+
+/**
+ * A line row that's a plain tap when tapped, but — in edit mode, when
+ * `onMove` is given — becomes draggable after a brief hold: the row lifts
+ * and follows the finger, swapping with its neighbor each time it crosses
+ * a row-height of movement. A quick tap (released before the hold
+ * threshold, or a fast scroll gesture) never engages this at all, so
+ * scrolling the page from on top of a line still works normally.
+ */
+function DraggableRow({
+  onTap,
+  onMove,
+  children,
+}: {
+  onTap: () => void;
+  onMove?: (delta: 1 | -1) => void;
+  children: React.ReactNode;
+}) {
+  const [dragging, setDragging] = useState(false);
+  const [offsetY, setOffsetY] = useState(0);
+  const rowRef = useRef<HTMLDivElement>(null);
+  const dragRef = useRef<DragState | null>(null);
+
+  function clearTimer() {
+    if (dragRef.current?.timer) {
+      clearTimeout(dragRef.current.timer);
+      dragRef.current.timer = null;
+    }
+  }
+
+  function onPointerDown(e: ReactPointerEvent<HTMLDivElement>) {
+    if (!onMove) return;
+    const rowHeight = rowRef.current?.getBoundingClientRect().height ?? 24;
+    const pointerId = e.pointerId;
+    const target = e.currentTarget;
+    const state: DragState = {
+      startX: e.clientX,
+      startY: e.clientY,
+      thresholdY: e.clientY,
+      rowHeight,
+      moved: false,
+      dragging: false,
+      timer: null,
+    };
+    dragRef.current = state;
+    state.timer = setTimeout(() => {
+      if (!dragRef.current || dragRef.current.moved) return;
+      dragRef.current.dragging = true;
+      target.setPointerCapture(pointerId);
+      setDragging(true);
+    }, LONG_PRESS_MS);
+  }
+
+  function onPointerMove(e: ReactPointerEvent<HTMLDivElement>) {
+    const state = dragRef.current;
+    if (!state) return;
+    if (!state.dragging) {
+      const dx = e.clientX - state.startX;
+      const dy = e.clientY - state.startY;
+      if (Math.abs(dx) > DRAG_SLOP || Math.abs(dy) > DRAG_SLOP) {
+        state.moved = true;
+        clearTimer();
+      }
+      return;
+    }
+    const totalDy = e.clientY - state.thresholdY;
+    setOffsetY(e.clientY - state.startY);
+    if (totalDy > state.rowHeight) {
+      onMove?.(1);
+      state.thresholdY = e.clientY;
+    } else if (totalDy < -state.rowHeight) {
+      onMove?.(-1);
+      state.thresholdY = e.clientY;
+    }
+  }
+
+  function onPointerUp(e: ReactPointerEvent<HTMLDivElement>) {
+    const state = dragRef.current;
+    clearTimer();
+    if (state?.dragging) {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    } else if (!state?.moved) {
+      onTap();
+    }
+    dragRef.current = null;
+    setDragging(false);
+    setOffsetY(0);
+  }
+
+  return (
+    <div
+      ref={rowRef}
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+      onPointerCancel={onPointerUp}
+      style={{
+        transform: dragging ? `translateY(${offsetY}px)` : undefined,
+        touchAction: dragging ? "none" : "pan-y",
+      }}
+      className={cn(
+        "group flex items-center justify-between gap-1 py-0.5",
+        dragging && "relative z-10 rounded bg-bg-elevated-2 shadow-lg",
+      )}
+    >
+      {children}
     </div>
   );
 }
