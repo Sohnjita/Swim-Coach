@@ -338,7 +338,13 @@ function PracticeDetail({ id, startInEditMode }: { id: string; startInEditMode: 
               <p className="text-sm text-text-tertiary">No blocks yet.</p>
             ))}
           {practice.sets.map((set, i) => {
-            const { repScores, setScore } = scoreSet(set, practice.course, history, scoringConfig);
+            const { repScores, setScore } = scoreSet(
+              set,
+              practice.course,
+              practice.id,
+              history,
+              scoringConfig,
+            );
             return (
               <div key={set.id}>
                 <BlockPanel

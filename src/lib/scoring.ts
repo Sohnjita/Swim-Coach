@@ -114,6 +114,7 @@ export function normalizedRepTime(
 
 export interface RepHistoryEntry {
   repId: string;
+  practiceId: string;
   key: string;
   normalizedTime: number;
   time: number; // raw logged seconds, for interval/rest comparisons
@@ -149,6 +150,7 @@ export function scoreRep(
   rep: Rep,
   course: Course,
   setType: SetType,
+  practiceId: string,
   history: RepHistoryEntry[],
   config: ScoringConfig,
 ): ScoredRep {
@@ -166,9 +168,20 @@ export function scoreRep(
 
   const key = repComparisonKey(rep.distance, rep.stroke, course, setType);
   const keyHistory = history.filter((h) => h.key === key && h.repId !== rep.id);
-  const recentHistory = [...keyHistory]
-    .sort((a, b) => b.date.localeCompare(a.date))
-    .slice(0, RECENT_WINDOW);
+  // Reps from the *same* practice at this exact shape are always part of the
+  // comparison pool — that's what a swimmer actually means by "how did this
+  // rep do" (e.g. the other two 50s in the same 3x50 set). Without this, a
+  // later, unrelated practice at the same shape can fill the whole recency
+  // window and crowd out same-set siblings entirely, making reps within one
+  // set stop being compared to each other at all.
+  const siblingHistory = keyHistory.filter((h) => h.practiceId === practiceId);
+  const otherHistory = keyHistory
+    .filter((h) => h.practiceId !== practiceId)
+    .sort((a, b) => b.date.localeCompare(a.date));
+  const recentHistory = [
+    ...siblingHistory,
+    ...otherHistory.slice(0, Math.max(0, RECENT_WINDOW - siblingHistory.length)),
+  ];
 
   const bestTime = recentHistory.length
     ? Math.min(normalizedTime, ...recentHistory.map((h) => h.normalizedTime))
@@ -248,10 +261,13 @@ export function scoreRep(
 export function scoreSet(
   set: PracticeSet,
   course: Course,
+  practiceId: string,
   history: RepHistoryEntry[],
   config: ScoringConfig,
 ): { repScores: ScoredRep[]; setScore: number | null } {
-  const repScores = set.reps.map((rep) => scoreRep(rep, course, set.type, history, config));
+  const repScores = set.reps.map((rep) =>
+    scoreRep(rep, course, set.type, practiceId, history, config),
+  );
   const scored = repScores.filter(
     (r): r is ScoredRep & { compositeScore: number } => r.compositeScore !== null,
   );
@@ -272,7 +288,7 @@ export function scorePractice(
   config: ScoringConfig,
 ): ScoredPractice {
   const setScores = practice.sets.map((set) => {
-    const { setScore } = scoreSet(set, practice.course, history, config);
+    const { setScore } = scoreSet(set, practice.course, practice.id, history, config);
     return { setId: set.id, type: set.type, score: setScore };
   });
 
@@ -304,7 +320,7 @@ export function stampPracticeScores(
   config: ScoringConfig,
 ): Practice {
   const sets = practice.sets.map((set) => {
-    const { repScores, setScore } = scoreSet(set, practice.course, history, config);
+    const { repScores, setScore } = scoreSet(set, practice.course, practice.id, history, config);
     const reps = set.reps.map((rep) => ({
       ...rep,
       score: repScores.find((r) => r.repId === rep.id)?.compositeScore ?? null,
@@ -328,6 +344,7 @@ export function buildRepHistory(
         if (normalizedTime === null) continue;
         entries.push({
           repId: rep.id,
+          practiceId: practice.id,
           key: repComparisonKey(rep.distance, rep.stroke, practice.course, set.type),
           normalizedTime,
           time: rep.time!,
