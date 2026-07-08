@@ -7,6 +7,7 @@ import { db, SCORING_CONFIG_ID } from "@/lib/db";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Card, CardTitle } from "@/components/ui/Card";
 import { ScoreRing } from "@/components/ui/ScoreRing";
+import { TrainingPowerIndex } from "@/components/analyze/TrainingPowerIndex";
 import { DEFAULT_SCORING_CONFIG, predictGoalTimes } from "@/lib/scoring";
 import { practiceSummaryLine } from "@/lib/practiceHelpers";
 import { formatDateLabel } from "@/lib/format";
@@ -30,6 +31,8 @@ export default function AnalyzePage() {
       <PageHeader title="Analyze" />
 
       <div className="divide-y divide-border/40 p-4 [&>*+*]:pt-6">
+        <TrainingPowerIndex />
+
         <Card>
           <div className="mb-3 flex items-center justify-between">
             <CardTitle>Recent practice scores</CardTitle>

@@ -38,6 +38,10 @@ const PACE_SENSITIVITY = 4; // points lost per 1% slower than best-equivalent
 // moves the score more on a short rep (a bigger share of a small stroke
 // count) than on a long one, without any extra distance-specific logic.
 const EFFICIENCY_SENSITIVITY = 2;
+// Floor efficiencyScore is compressed to before entering the composite
+// blend (see scoreRep) — caps how far a bad stroke count can drag the
+// composite down, so it can never outweigh a real pace advantage.
+const EFFICIENCY_COMPOSITE_FLOOR = 60;
 const EFFORT_RPE_SENSITIVITY = 5; // points shifted per RPE point away from 5
 // Seconds of comparison-time credit given per second of rest *less* than
 // this rep shape's historical average (or, for projections, per second
@@ -109,6 +113,7 @@ export function normalizedRepTime(
 }
 
 export interface RepHistoryEntry {
+  repId: string;
   key: string;
   normalizedTime: number;
   time: number; // raw logged seconds, for interval/rest comparisons
@@ -129,8 +134,10 @@ export interface ScoredRep {
 /**
  * Scores a single rep against the swimmer's own recent history at that
  * same distance/stroke/course/set-type shape (or LCM-equivalent history
- * for the two goal race events). `history` should exclude the rep being
- * scored.
+ * for the two goal race events). `history` may include the rep being
+ * scored — it's filtered out by id below, so a rep never gets compared
+ * against itself (which would otherwise silently zero out the interval
+ * credit for the very first rep logged at a new shape).
  *
  * Pace is interval-aware: a rep swum on a materially tighter interval than
  * this shape's historical average gets a small, capped time credit before
@@ -158,7 +165,7 @@ export function scoreRep(
   }
 
   const key = repComparisonKey(rep.distance, rep.stroke, course, setType);
-  const keyHistory = history.filter((h) => h.key === key);
+  const keyHistory = history.filter((h) => h.key === key && h.repId !== rep.id);
   const recentHistory = [...keyHistory]
     .sort((a, b) => b.date.localeCompare(a.date))
     .slice(0, RECENT_WINDOW);
@@ -209,7 +216,16 @@ export function scoreRep(
     { score: paceScore, weight: config.paceWeight },
   ];
   if (efficiencyScore !== null)
-    parts.push({ score: efficiencyScore, weight: config.efficiencyWeight });
+    // Floored to [EFFICIENCY_COMPOSITE_FLOOR, 100] before entering the
+    // blend — stroke count can still tip a close-pace comparison, but a
+    // slower time can never be rescued by a low stroke count, and a faster
+    // time can never be dragged below a slower one by stroke count alone.
+    // Time stays the primary factor; efficiencyScore itself (returned
+    // below) is left unfloored so it still reads as a true 0-100 measure.
+    parts.push({
+      score: EFFICIENCY_COMPOSITE_FLOOR + (100 - EFFICIENCY_COMPOSITE_FLOOR) * (efficiencyScore / 100),
+      weight: config.efficiencyWeight,
+    });
   if (effortScore !== null)
     parts.push({ score: effortScore, weight: config.effortWeight });
 
@@ -311,6 +327,7 @@ export function buildRepHistory(
         const normalizedTime = normalizedRepTime(rep, practice.course, config);
         if (normalizedTime === null) continue;
         entries.push({
+          repId: rep.id,
           key: repComparisonKey(rep.distance, rep.stroke, practice.course, set.type),
           normalizedTime,
           time: rep.time!,
