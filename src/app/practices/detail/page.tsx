@@ -4,7 +4,7 @@ import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
-import { ArrowLeft, Check, ChevronDown, Copy, Pencil, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, Check, ChevronDown, Copy, Pencil, Plus, Sparkles, Trash2 } from "lucide-react";
 import { db, newId, SCORING_CONFIG_ID } from "@/lib/db";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { CardTitle } from "@/components/ui/Card";
@@ -33,6 +33,7 @@ import {
   practiceSummaryLine,
 } from "@/lib/practiceHelpers";
 import { formatDateLabel } from "@/lib/format";
+import { recommendationToPracticeSet, recommendSet } from "@/lib/setRecommendation";
 import type {
   Course,
   EnergyFocus,
@@ -90,6 +91,7 @@ function PracticeDetail({ id, startInEditMode }: { id: string; startInEditMode: 
   const practice = useLiveQuery(() => db.practices.get(id), [id]);
   const allPractices = useLiveQuery(() => db.practices.toArray(), []);
   const templates = useLiveQuery(() => db.setTemplates.toArray(), []);
+  const meets = useLiveQuery(() => db.meets.toArray(), []) ?? [];
   const scoringConfig =
     useLiveQuery(() => db.scoringConfig.get(SCORING_CONFIG_ID), []) ??
     DEFAULT_SCORING_CONFIG;
@@ -105,7 +107,8 @@ function PracticeDetail({ id, startInEditMode }: { id: string; startInEditMode: 
     );
   }
 
-  const history = buildRepHistory(allPractices, scoringConfig);
+  const allPracticesList: Practice[] = allPractices;
+  const history = buildRepHistory(allPracticesList, scoringConfig);
   const currentPractice: Practice = practice;
   const projectionContext: Omit<ProjectionContext, "setType"> = {
     history,
@@ -251,6 +254,13 @@ function PracticeDetail({ id, startInEditMode }: { id: string; startInEditMode: 
     insertBlockAt(index, makeSetFromTemplate(template));
   }
 
+  function insertSuggestedAfter(index: number) {
+    const recommendation = recommendSet(allPracticesList, meets, templates ?? [], currentPractice.date);
+    const block = recommendationToPracticeSet(recommendation);
+    insertBlockAt(index, block);
+    setJustAddedSetId(block.id);
+  }
+
   return (
     <div>
       <PageHeader
@@ -333,6 +343,7 @@ function PracticeDetail({ id, startInEditMode }: { id: string; startInEditMode: 
                 templates={templates ?? []}
                 onAddBlock={() => insertBlockAfter(-1)}
                 onAddTemplate={(template) => insertTemplateAfter(-1, template)}
+                onAddSuggested={() => insertSuggestedAfter(-1)}
               />
             ) : (
               <p className="text-sm text-text-tertiary">No blocks yet.</p>
@@ -372,6 +383,7 @@ function PracticeDetail({ id, startInEditMode }: { id: string; startInEditMode: 
                     templates={templates ?? []}
                     onAddBlock={() => insertBlockAfter(i)}
                     onAddTemplate={(template) => insertTemplateAfter(i, template)}
+                    onAddSuggested={() => insertSuggestedAfter(i)}
                   />
                 )}
               </div>
@@ -581,10 +593,12 @@ function BlockActionsBar({
   templates,
   onAddBlock,
   onAddTemplate,
+  onAddSuggested,
 }: {
   templates: SetTemplate[];
   onAddBlock: () => void;
   onAddTemplate: (template: SetTemplate) => void;
+  onAddSuggested?: () => void;
 }) {
   const [showPicker, setShowPicker] = useState(false);
 
@@ -605,6 +619,15 @@ function BlockActionsBar({
         >
           <Plus size={12} /> Set
         </button>
+        {onAddSuggested && (
+          <button
+            type="button"
+            onClick={onAddSuggested}
+            className="flex items-center gap-1 rounded-lg border border-dashed border-accent/50 px-2 py-1 text-xs text-accent active:opacity-70"
+          >
+            <Sparkles size={12} /> Suggested
+          </button>
+        )}
       </div>
 
       {showPicker && (
