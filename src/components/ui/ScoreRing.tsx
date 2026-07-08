@@ -1,9 +1,15 @@
-/** 85+ great (green), 70-84 good (accent blue), 50-69 medium (yellow), 0-49 bad (red). */
+/**
+ * 85+ great (green), 70-84 good (accent blue), 50-69 medium (yellow), 0-49
+ * bad (red). Banded on the *rounded* score — the same number the ring
+ * displays — so a raw 84.6 (displayed as "85") gets the green band instead
+ * of looking stuck on blue.
+ */
 function ringColor(score: number | null): string {
   if (score === null) return "var(--accent)";
-  if (score >= 85) return "var(--success)";
-  if (score >= 70) return "var(--accent)";
-  if (score >= 50) return "var(--warning)";
+  const rounded = Math.round(score);
+  if (rounded >= 85) return "var(--success)";
+  if (rounded >= 70) return "var(--accent)";
+  if (rounded >= 50) return "var(--warning)";
   return "var(--danger)";
 }
 
