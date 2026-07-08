@@ -8,8 +8,10 @@ const DRAG_SLOP = 4; // px of movement before a pointer-down counts as a drag, n
 
 interface DragState {
   startX: number;
+  startY: number;
   startOffset: number;
   moved: boolean;
+  horizontal: boolean;
 }
 
 /** A list row that can be swiped left to reveal a delete action, iOS-Mail style. */
@@ -27,7 +29,13 @@ export function SwipeToDeleteRow({
   const dragRef = useRef<DragState | null>(null);
 
   function onPointerDown(e: PointerEvent<HTMLDivElement>) {
-    dragRef.current = { startX: e.clientX, startOffset: offset, moved: false };
+    dragRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      startOffset: offset,
+      moved: false,
+      horizontal: false,
+    };
     e.currentTarget.setPointerCapture(e.pointerId);
     setDragging(true);
   }
@@ -36,8 +44,15 @@ export function SwipeToDeleteRow({
     const drag = dragRef.current;
     if (!drag) return;
     const dx = e.clientX - drag.startX;
-    if (Math.abs(dx) > DRAG_SLOP) drag.moved = true;
-    if (!drag.moved) return;
+    const dy = e.clientY - drag.startY;
+    if (!drag.moved && (Math.abs(dx) > DRAG_SLOP || Math.abs(dy) > DRAG_SLOP)) {
+      drag.moved = true;
+      // Only a horizontal-dominant gesture is a swipe attempt — a vertical
+      // one is a scroll, and must not snap the reveal open or get treated
+      // as a tap on release (both of which fought the page's own scrolling).
+      drag.horizontal = Math.abs(dx) > Math.abs(dy);
+    }
+    if (!drag.moved || !drag.horizontal) return;
     setOffset(Math.min(0, Math.max(-REVEAL_WIDTH, drag.startOffset + dx)));
   }
 
@@ -52,6 +67,7 @@ export function SwipeToDeleteRow({
       else onClick();
       return;
     }
+    if (!drag.horizontal) return; // vertical scroll — leave it to the page
     setOffset((cur) => (cur < -REVEAL_WIDTH / 2 ? -REVEAL_WIDTH : 0));
   }
 

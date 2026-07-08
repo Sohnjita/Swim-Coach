@@ -118,6 +118,7 @@ export function expandLinesToReps(
               start,
               suit,
               notes: item.tag,
+              score: null,
             });
           }
         } else if (item.kind === "round") {
@@ -129,6 +130,25 @@ export function expandLinesToReps(
 
   walk(lines, 1);
   return reps;
+}
+
+/**
+ * Moves a line by `delta` positions within whichever sibling array (the
+ * top-level list, or a round's own `items`) actually contains it. A no-op
+ * if the move would go past either end of that sibling list.
+ */
+export function moveLineBy(lines: PracticeLine[], id: string, delta: number): PracticeLine[] {
+  const idx = lines.findIndex((line) => line.id === id);
+  if (idx !== -1) {
+    const newIdx = idx + delta;
+    if (newIdx < 0 || newIdx >= lines.length) return lines;
+    const next = [...lines];
+    [next[idx], next[newIdx]] = [next[newIdx], next[idx]];
+    return next;
+  }
+  return lines.map((line) =>
+    line.kind === "round" ? { ...line, items: moveLineBy(line.items, id, delta) } : line,
+  );
 }
 
 /** Recursively appends an item into a round (by id) anywhere in the line tree. */

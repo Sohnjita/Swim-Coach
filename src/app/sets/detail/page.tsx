@@ -13,6 +13,7 @@ import { NotationDocument, type ProjectionContext } from "@/components/practice/
 import {
   appendItemToRound,
   formatLines,
+  moveLineBy,
   removeLineById,
   updateLineById,
 } from "@/lib/lineTree";
@@ -74,6 +75,7 @@ function SetTemplateDetail({
     history: buildRepHistory(allPractices, scoringConfig),
     config: scoringConfig,
     course: currentTemplate.course,
+    setType: currentTemplate.type,
   };
 
   async function save(next: SetTemplate) {
@@ -103,6 +105,10 @@ function SetTemplateDetail({
 
   function deleteLine(lineId: string) {
     setLines(removeLineById(currentTemplate.lines, lineId));
+  }
+
+  function moveLine(lineId: string, delta: number) {
+    setLines(moveLineBy(currentTemplate.lines, lineId, delta));
   }
 
   function addLine(line: PracticeLine, parentRoundId?: string) {
@@ -148,16 +154,16 @@ function SetTemplateDetail({
               value={template.label}
               onChange={(e) => save({ ...currentTemplate, label: e.target.value })}
               onBlur={() => setEditingLabel(false)}
-              placeholder={template.type}
+              placeholder="Set title"
               className="min-w-0 flex-1 bg-transparent text-base font-medium text-text-primary outline-none placeholder:font-normal placeholder:text-text-tertiary"
             />
           ) : (
             <button
               type="button"
               onClick={() => setEditingLabel(true)}
-              className="min-w-0 flex-1 truncate text-left text-base font-medium capitalize text-text-primary active:opacity-70"
+              className="min-w-0 flex-1 truncate text-left text-base font-medium text-text-primary active:opacity-70"
             >
-              {template.label || template.type}
+              {template.label || "Untitled set"}
             </button>
           )}
           <button type="button" onClick={cycleType} className="shrink-0 active:opacity-70">
@@ -175,6 +181,7 @@ function SetTemplateDetail({
           lines={template.lines}
           onUpdateLine={updateLine}
           onDeleteLine={deleteLine}
+          onMoveLine={moveLine}
           onAddLine={addLine}
           projectionContext={projectionContext}
         />

@@ -1,4 +1,4 @@
-import type { Course, Stroke } from "./types";
+import type { Course, SetType, Stroke } from "./types";
 import { repComparisonKey, type RepHistoryEntry } from "./scoring";
 import { formatTime } from "./conversions";
 
@@ -16,6 +16,7 @@ export interface RepShape {
   distance: number;
   stroke: Stroke;
   course: Course;
+  setType: SetType;
   baseIntervalSeconds: number | null;
 }
 
@@ -30,7 +31,7 @@ export function suggestSetVariation(
   shape: RepShape,
   history: RepHistoryEntry[],
 ): SetVariationSuggestion {
-  const key = repComparisonKey(shape.distance, shape.stroke, shape.course, null);
+  const key = repComparisonKey(shape.distance, shape.stroke, shape.course, shape.setType);
   const matches = history
     .filter((h) => h.key === key)
     .sort((a, b) => a.date.localeCompare(b.date));

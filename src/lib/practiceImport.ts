@@ -90,6 +90,7 @@ export function parsePracticeText(text: string): Practice {
       label,
       lines: linesTree,
       reps: expandLinesToReps(linesTree, "push", "practice"),
+      setScore: null,
     };
   });
 
@@ -108,6 +109,7 @@ export function parsePracticeText(text: string): Practice {
     notes,
     createdAt: now,
     updatedAt: now,
+    practiceScore: null,
   };
 }
 

@@ -19,11 +19,12 @@ import {
   appendItemToRound,
   countReps,
   formatLines,
+  moveLineBy,
   removeLineById,
   totalDistance,
   updateLineById,
 } from "@/lib/lineTree";
-import { buildRepHistory, DEFAULT_SCORING_CONFIG, scoreSet } from "@/lib/scoring";
+import { buildRepHistory, DEFAULT_SCORING_CONFIG, scoreSet, stampPracticeScores } from "@/lib/scoring";
 import {
   emptyPracticeSet,
   energyFocusLabel,
@@ -106,14 +107,19 @@ function PracticeDetail({ id, startInEditMode }: { id: string; startInEditMode: 
 
   const history = buildRepHistory(allPractices, scoringConfig);
   const currentPractice: Practice = practice;
-  const projectionContext: ProjectionContext = {
+  const projectionContext: Omit<ProjectionContext, "setType"> = {
     history,
     config: scoringConfig,
     course: currentPractice.course,
   };
 
   async function save(next: Practice) {
-    await db.practices.put({ ...next, updatedAt: new Date().toISOString() });
+    // Snapshot scores at save time (not recomputed live everywhere else)
+    // so a practice's score stays fixed once you're done editing it, even
+    // as more history is logged elsewhere — but still refreshes each time
+    // you actively edit *this* practice, which is what backfilling needs.
+    const stamped = stampPracticeScores(next, history, scoringConfig);
+    await db.practices.put({ ...stamped, updatedAt: new Date().toISOString() });
   }
 
   async function handleDelete() {
@@ -150,6 +156,12 @@ function PracticeDetail({ id, startInEditMode }: { id: string; startInEditMode: 
     setLines(setId, removeLineById(set.lines, lineId));
   }
 
+  function moveSetLine(setId: string, lineId: string, delta: number) {
+    const set = currentPractice.sets.find((s) => s.id === setId);
+    if (!set) return;
+    setLines(setId, moveLineBy(set.lines, lineId, delta));
+  }
+
   function addSetLine(setId: string, line: PracticeLine, parentRoundId?: string) {
     const set = currentPractice.sets.find((s) => s.id === setId);
     if (!set) return;
@@ -184,6 +196,7 @@ function PracticeDetail({ id, startInEditMode }: { id: string; startInEditMode: 
       start: "push",
       suit: "practice",
       notes: lastRepsLine?.tag,
+      score: null,
     };
     const sets = currentPractice.sets.map((s) =>
       s.id === setId ? { ...s, reps: [...s.reps, rep] } : s,
@@ -314,6 +327,16 @@ function PracticeDetail({ id, startInEditMode }: { id: string; startInEditMode: 
         </div>
 
         <div className="space-y-1">
+          {practice.sets.length === 0 &&
+            (editing ? (
+              <BlockActionsBar
+                templates={templates ?? []}
+                onAddBlock={() => insertBlockAfter(-1)}
+                onAddTemplate={(template) => insertTemplateAfter(-1, template)}
+              />
+            ) : (
+              <p className="text-sm text-text-tertiary">No blocks yet.</p>
+            ))}
           {practice.sets.map((set, i) => {
             const { repScores, setScore } = scoreSet(set, practice.course, history, scoringConfig);
             return (
@@ -331,6 +354,7 @@ function PracticeDetail({ id, startInEditMode }: { id: string; startInEditMode: 
                   onRemove={() => removeBlock(set.id)}
                   onUpdateLine={(lineId, next) => updateSetLine(set.id, lineId, next)}
                   onDeleteLine={(lineId) => deleteSetLine(set.id, lineId)}
+                  onMoveLine={(lineId, delta) => moveSetLine(set.id, lineId, delta)}
                   onAddLine={(line, parentRoundId) => addSetLine(set.id, line, parentRoundId)}
                   onUpdateRep={(repId, rep) => updateRep(set.id, repId, rep)}
                   onAddRep={() => addRep(set.id)}
@@ -433,6 +457,7 @@ function BlockPanel({
   onRemove,
   onUpdateLine,
   onDeleteLine,
+  onMoveLine,
   onAddLine,
   onUpdateRep,
   onAddRep,
@@ -443,7 +468,7 @@ function BlockPanel({
   setScore: number | null;
   editing: boolean;
   canRemove: boolean;
-  projectionContext: ProjectionContext;
+  projectionContext: Omit<ProjectionContext, "setType">;
   autoFocusLabel: boolean;
   onAutoFocusConsumed: () => void;
   onLabelChange: (label: string) => void;
@@ -451,6 +476,7 @@ function BlockPanel({
   onRemove: () => void;
   onUpdateLine: (lineId: string, next: PracticeLine) => void;
   onDeleteLine: (lineId: string) => void;
+  onMoveLine: (lineId: string, delta: number) => void;
   onAddLine: (line: PracticeLine, parentRoundId?: string) => void;
   onUpdateRep: (repId: string, rep: Rep) => void;
   onAddRep: () => void;
@@ -478,7 +504,7 @@ function BlockPanel({
               onLabelChange(labelDraft.trim());
               setEditingLabel(false);
             }}
-            placeholder={set.type}
+            placeholder="Block title"
             className="h-7 min-w-0 flex-1 bg-transparent text-sm font-semibold text-text-primary outline-none placeholder:font-normal placeholder:text-text-tertiary"
           />
         ) : editing ? (
@@ -488,13 +514,13 @@ function BlockPanel({
               setLabelDraft(set.label);
               setEditingLabel(true);
             }}
-            className="min-w-0 flex-1 truncate text-left text-sm font-semibold capitalize text-text-primary active:opacity-70"
+            className="min-w-0 flex-1 truncate text-left text-sm font-semibold text-text-primary active:opacity-70"
           >
-            {set.label || set.type}
+            {set.label || "Untitled block"}
           </button>
         ) : (
-          <p className="min-w-0 flex-1 truncate text-sm font-semibold capitalize text-text-primary">
-            {set.label || set.type}
+          <p className="min-w-0 flex-1 truncate text-sm font-semibold text-text-primary">
+            {set.label || "Untitled block"}
           </p>
         )}
         <div className="flex shrink-0 items-center gap-2">
@@ -522,11 +548,13 @@ function BlockPanel({
         lines={set.lines}
         onUpdateLine={editing ? onUpdateLine : undefined}
         onDeleteLine={editing ? onDeleteLine : undefined}
+        onMoveLine={editing ? onMoveLine : undefined}
         onAddLine={editing ? onAddLine : undefined}
-        projectionContext={editing ? projectionContext : undefined}
+        onLogTime={editing ? onAddRep : undefined}
+        projectionContext={editing ? { ...projectionContext, setType: set.type } : undefined}
       />
 
-      {(set.reps.length > 0 || editing) && (
+      {set.reps.length > 0 && (
         <div className="mt-3 space-y-1.5 border-t border-border/40 pt-3">
           {set.reps.map((rep) => (
             <RepRow
@@ -537,15 +565,6 @@ function BlockPanel({
               onRemove={editing ? () => onRemoveRep(rep.id) : undefined}
             />
           ))}
-          {editing && (
-            <button
-              type="button"
-              onClick={onAddRep}
-              className="flex items-center gap-1 rounded-lg border border-dashed border-border px-2 py-1 text-xs text-text-tertiary active:opacity-70"
-            >
-              <Plus size={12} /> Add time
-            </button>
-          )}
         </div>
       )}
     </div>

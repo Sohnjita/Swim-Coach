@@ -36,6 +36,10 @@ export interface Rep {
   start: StartType;
   suit: SuitType;
   notes?: string;
+  // Snapshotted composite score as of the last time this practice was
+  // saved — not recomputed live, so a rep's score stays fixed once you
+  // stop editing that practice, even as more history is logged elsewhere.
+  score: number | null;
 }
 
 export type LineModifier = "swim" | "kick" | "drill" | "pull";
@@ -77,6 +81,8 @@ export interface PracticeSet {
   lines: PracticeLine[]; // the notation as written
   reps: Rep[]; // generated from lines, actually logged (time/strokeCount/RPE)
   notes?: string;
+  // Snapshotted as of the last save — see Rep.score.
+  setScore: number | null;
 }
 
 export interface Practice {
@@ -94,6 +100,8 @@ export interface Practice {
   notes?: string;
   createdAt: string;
   updatedAt: string;
+  // Snapshotted as of the last save — see Rep.score.
+  practiceScore: number | null;
 }
 
 /** A reusable set template a swimmer can pull into a new practice. */

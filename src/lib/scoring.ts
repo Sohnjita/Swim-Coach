@@ -30,7 +30,7 @@ export const DEFAULT_SCORING_CONFIG: ScoringConfig = {
 
 // Internal sensitivity constants (not user-tunable — the weights/taper/suit
 // numbers above are the meaningful knobs exposed in Settings).
-const PACE_SENSITIVITY = 10; // points lost per 1% slower than best-equivalent
+const PACE_SENSITIVITY = 4; // points lost per 1% slower than best-equivalent
 const EFFICIENCY_SENSITIVITY = 8; // points lost per 1% worse SWOLF than best
 const EFFORT_RPE_SENSITIVITY = 5; // points shifted per RPE point away from 5
 // Seconds of comparison-time credit given per second of rest *less* than
@@ -38,6 +38,16 @@ const EFFORT_RPE_SENSITIVITY = 5; // points shifted per RPE point away from 5
 // less rest than a historical entry's own interval) — a rough stand-in for
 // "swimming a similar time on a tighter interval is a harder effort."
 const INTERVAL_TIME_CREDIT = 0.03;
+// Caps how many seconds of rest-delta the credit above can act on, so two
+// sets with very different rest philosophies (a tight send-off set vs. a
+// full-rest time-trial set, which can differ by many minutes of "rest")
+// can't swing a comparison by double-digit seconds just because they
+// happen to share a distance/stroke/set-type signature.
+const INTERVAL_CREDIT_CAP_SECONDS = 120;
+// How many of the most recent same-signature reps count as "history" for
+// pace comparison — keeps one old rested/tech-suit outlier from becoming a
+// permanent, unbeatable bogey for every future practice-suit effort.
+const RECENT_WINDOW = 5;
 // Recency weighting for goal projections: each older sample (by date, most
 // recent first) counts for this much less than the one before it.
 const RECENCY_DECAY = 0.8;
@@ -61,18 +71,20 @@ function isRaceEvent(distance: number, stroke: Stroke): stroke is "breast" {
 
 /**
  * Grouping key used to find "what's the best I've done at this exact rep
- * shape" — distance/stroke/course plus the line's descriptor tag (e.g.
- * "best avg", "descend 1-4"), so history comparisons don't pool an all-out
- * effort together with an easy swim of the same distance/stroke.
+ * shape" — distance/stroke/course plus the containing block's set type
+ * (aerobic/threshold/sprint/lactate/technique), so a race-pace effort
+ * doesn't get pooled with an easy swim of the same distance/stroke. Set
+ * type is a small, controlled vocabulary (vs. free-text notes), which
+ * keeps comparison pools dense enough to be meaningful.
  */
 export function repComparisonKey(
   distance: number,
   stroke: Stroke,
   course: Course,
-  tag: string | null,
+  setType: SetType,
 ): string {
   const base = isRaceEvent(distance, stroke) ? `race-${distance}-breast` : `${distance}-${stroke}-${course}`;
-  return tag ? `${base}::${tag}` : base;
+  return `${base}::${setType}`;
 }
 
 /** Normalizes a rep's raw time to a comparable baseline (practice suit, push, LCM if a race event). */
@@ -109,20 +121,21 @@ export interface ScoredRep {
 }
 
 /**
- * Scores a single rep against the swimmer's own history at that same
- * distance/stroke/course/descriptor-tag shape (or LCM-equivalent history
+ * Scores a single rep against the swimmer's own recent history at that
+ * same distance/stroke/course/set-type shape (or LCM-equivalent history
  * for the two goal race events). `history` should exclude the rep being
  * scored.
  *
  * Pace is interval-aware: a rep swum on a materially tighter interval than
- * this shape's historical average gets a small time credit before being
- * compared to the historical best, and a rep on a more generous interval
- * gets a small penalty — so a slightly slower time on a much harder
- * interval doesn't register as a flat regression.
+ * this shape's historical average gets a small, capped time credit before
+ * being compared to the historical best, and a rep on a more generous
+ * interval gets a small penalty — so a slightly slower time on a much
+ * harder interval doesn't register as a flat regression.
  */
 export function scoreRep(
   rep: Rep,
   course: Course,
+  setType: SetType,
   history: RepHistoryEntry[],
   config: ScoringConfig,
 ): ScoredRep {
@@ -138,24 +151,30 @@ export function scoreRep(
     };
   }
 
-  const tag = rep.notes ?? null;
-  const key = repComparisonKey(rep.distance, rep.stroke, course, tag);
+  const key = repComparisonKey(rep.distance, rep.stroke, course, setType);
   const keyHistory = history.filter((h) => h.key === key);
+  const recentHistory = [...keyHistory]
+    .sort((a, b) => b.date.localeCompare(a.date))
+    .slice(0, RECENT_WINDOW);
 
-  const bestTime = keyHistory.length
-    ? Math.min(normalizedTime, ...keyHistory.map((h) => h.normalizedTime))
+  const bestTime = recentHistory.length
+    ? Math.min(normalizedTime, ...recentHistory.map((h) => h.normalizedTime))
     : normalizedTime;
 
   let comparisonTime = normalizedTime;
   if (rep.restIntervalSeconds !== null && rep.time !== null) {
-    const historicalRests = keyHistory
+    const historicalRests = recentHistory
       .filter((h) => h.intervalSeconds !== null)
       .map((h) => h.intervalSeconds! - h.time);
     if (historicalRests.length > 0) {
       const avgHistoricalRest =
         historicalRests.reduce((sum, r) => sum + r, 0) / historicalRests.length;
       const restObtained = rep.restIntervalSeconds - rep.time;
-      const restDelta = avgHistoricalRest - restObtained;
+      const restDelta = clamp(
+        avgHistoricalRest - restObtained,
+        -INTERVAL_CREDIT_CAP_SECONDS,
+        INTERVAL_CREDIT_CAP_SECONDS,
+      );
       comparisonTime = normalizedTime - restDelta * INTERVAL_TIME_CREDIT;
     }
   }
@@ -213,7 +232,7 @@ export function scoreSet(
   history: RepHistoryEntry[],
   config: ScoringConfig,
 ): { repScores: ScoredRep[]; setScore: number | null } {
-  const repScores = set.reps.map((rep) => scoreRep(rep, course, history, config));
+  const repScores = set.reps.map((rep) => scoreRep(rep, course, set.type, history, config));
   const scored = repScores.filter(
     (r): r is ScoredRep & { compositeScore: number } => r.compositeScore !== null,
   );
@@ -253,6 +272,30 @@ export function scorePractice(
   return { setScores, practiceScore };
 }
 
+/**
+ * Computes scores against `history` and writes them onto a cloned copy of
+ * `practice` (rep.score, set.setScore, practice.practiceScore) — this is
+ * the snapshot step: call it right before persisting an edited practice so
+ * its scores are frozen as of *this* save, not recomputed live forever
+ * after from whatever history exists whenever someone happens to view it.
+ */
+export function stampPracticeScores(
+  practice: Practice,
+  history: RepHistoryEntry[],
+  config: ScoringConfig,
+): Practice {
+  const sets = practice.sets.map((set) => {
+    const { repScores, setScore } = scoreSet(set, practice.course, history, config);
+    const reps = set.reps.map((rep) => ({
+      ...rep,
+      score: repScores.find((r) => r.repId === rep.id)?.compositeScore ?? null,
+    }));
+    return { ...set, reps, setScore };
+  });
+  const { practiceScore } = scorePractice({ ...practice, sets }, history, config);
+  return { ...practice, sets, practiceScore };
+}
+
 /** Builds the RepHistoryEntry[] scoring needs from a swimmer's full practice history. */
 export function buildRepHistory(
   practices: Practice[],
@@ -269,7 +312,7 @@ export function buildRepHistory(
             ? rep.time + rep.strokeCount
             : null;
         entries.push({
-          key: repComparisonKey(rep.distance, rep.stroke, practice.course, rep.notes ?? null),
+          key: repComparisonKey(rep.distance, rep.stroke, practice.course, set.type),
           normalizedTime,
           time: rep.time!,
           intervalSeconds: rep.restIntervalSeconds,
@@ -286,7 +329,7 @@ export interface RepShape {
   distance: number;
   stroke: Stroke;
   course: Course;
-  tag: string | null;
+  setType: SetType;
   intervalSeconds: number | null;
 }
 
@@ -300,18 +343,20 @@ export interface RepProjection {
 /**
  * On-demand "what would I likely go" projection for a rep shape you haven't
  * swum yet — e.g. while writing a set's notation, before practice. Pulls
- * every historical rep sharing the same distance/stroke/course/tag
- * signature, adjusts each to the *target* interval using the same rest-
- * credit heuristic as scoreRep (so a history of :55 and 1:05 swims still
- * informs a 1:00 projection, not just exact-interval matches), then blends
- * the best adjusted time with a recency-weighted average.
+ * every historical rep sharing the same distance/stroke/course/set-type
+ * signature, adjusts each to the *target* interval using the same capped
+ * rest-credit heuristic as scoreRep (so a history of :55 and 1:05 swims
+ * still informs a 1:00 projection, not just exact-interval matches), then
+ * blends the best adjusted time with a recency-weighted average, weighted
+ * toward the best so the projection reads as an achievable target rather
+ * than a regression toward the mean.
  */
 export function projectRepTime(
   shape: RepShape,
   history: RepHistoryEntry[],
   config: ScoringConfig,
 ): RepProjection {
-  const key = repComparisonKey(shape.distance, shape.stroke, shape.course, shape.tag);
+  const key = repComparisonKey(shape.distance, shape.stroke, shape.course, shape.setType);
   const matches = history
     .filter((h) => h.key === key)
     .sort((a, b) => b.date.localeCompare(a.date));
@@ -322,10 +367,14 @@ export function projectRepTime(
 
   // Base the projection on each match's baseline-normalized time (already
   // suit/start-adjusted when history was built), then layer the same
-  // rest-credit heuristic scoreRep uses, aimed at the target interval.
+  // capped rest-credit heuristic scoreRep uses, aimed at the target interval.
   const adjusted = matches.map((m) => {
     if (shape.intervalSeconds === null || m.intervalSeconds === null) return m.normalizedTime;
-    const restDeltaToTarget = m.intervalSeconds - shape.intervalSeconds;
+    const restDeltaToTarget = clamp(
+      m.intervalSeconds - shape.intervalSeconds,
+      -INTERVAL_CREDIT_CAP_SECONDS,
+      INTERVAL_CREDIT_CAP_SECONDS,
+    );
     return m.normalizedTime + restDeltaToTarget * INTERVAL_TIME_CREDIT;
   });
 
@@ -338,7 +387,7 @@ export function projectRepTime(
     totalWeight += weight;
   });
   const recencyWeightedAvg = weightedSum / totalWeight;
-  const projectedInComparisonSpace = 0.5 * bestAdjusted + 0.5 * recencyWeightedAvg;
+  const projectedInComparisonSpace = 0.7 * bestAdjusted + 0.3 * recencyWeightedAvg;
 
   // The two legacy race events pool history across courses via an
   // LCM-equivalent comparison space (see normalizedRepTime) — convert the

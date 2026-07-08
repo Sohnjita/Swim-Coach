@@ -7,12 +7,7 @@ import { db, SCORING_CONFIG_ID } from "@/lib/db";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Card, CardTitle } from "@/components/ui/Card";
 import { ScoreRing } from "@/components/ui/ScoreRing";
-import {
-  buildRepHistory,
-  DEFAULT_SCORING_CONFIG,
-  predictGoalTimes,
-  scorePractice,
-} from "@/lib/scoring";
+import { DEFAULT_SCORING_CONFIG, predictGoalTimes } from "@/lib/scoring";
 import { practiceSummaryLine } from "@/lib/practiceHelpers";
 import { formatDateLabel } from "@/lib/format";
 import { formatTime } from "@/lib/conversions";
@@ -26,13 +21,7 @@ export default function AnalyzePage() {
     useLiveQuery(() => db.scoringConfig.get(SCORING_CONFIG_ID), []) ??
     DEFAULT_SCORING_CONFIG;
 
-  const history = practices ? buildRepHistory(practices, scoringConfig) : [];
-
-  const recentScored = practices
-    ? practices
-        .slice(0, 5)
-        .map((p) => ({ practice: p, ...scorePractice(p, history, scoringConfig) }))
-    : [];
+  const recentScored = practices ? practices.slice(0, 5) : [];
 
   const predictions = practices ? predictGoalTimes(practices, scoringConfig) : [];
 
@@ -54,13 +43,13 @@ export default function AnalyzePage() {
             </p>
           ) : (
             <ul className="divide-y divide-border/40">
-              {recentScored.map(({ practice, practiceScore }) => (
+              {recentScored.map((practice) => (
                 <li key={practice.id}>
                   <Link
                     href={`/practices/detail?id=${practice.id}`}
                     className="flex items-center gap-3 py-2"
                   >
-                    <ScoreRing score={practiceScore} size={44} />
+                    <ScoreRing score={practice.practiceScore} size={44} />
                     <div className="flex-1">
                       <p className="text-sm text-text-primary">
                         {formatDateLabel(practice.date)}

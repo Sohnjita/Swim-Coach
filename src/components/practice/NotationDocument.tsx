@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Plus, Sparkles, X } from "lucide-react";
+import { Check, ChevronDown, ChevronUp, Plus, Sparkles, X } from "lucide-react";
 import type {
   Course,
   LineModifier,
@@ -9,6 +9,7 @@ import type {
   RepGroupLine,
   RoundLine,
   ScoringConfig,
+  SetType,
   Stroke,
   TextLine,
 } from "@/lib/types";
@@ -23,6 +24,7 @@ export interface ProjectionContext {
   history: RepHistoryEntry[];
   config: ScoringConfig;
   course: Course;
+  setType: SetType;
 }
 
 interface Row {
@@ -55,6 +57,8 @@ export function NotationDocument({
   onDeleteLine,
   onUpdateLine,
   onAddLine,
+  onMoveLine,
+  onLogTime,
   projectionContext,
 }: {
   lines: PracticeLine[];
@@ -62,6 +66,10 @@ export function NotationDocument({
   onUpdateLine?: (id: string, next: PracticeLine) => void;
   /** Appends a new line. `parentRoundId` targets a round's items instead of the top level. */
   onAddLine?: (line: PracticeLine, parentRoundId?: string) => void;
+  /** Reorders a line by `delta` positions within its own sibling list. */
+  onMoveLine?: (id: string, delta: number) => void;
+  /** Logs a new timed rep for this block, seeded from its last written line. */
+  onLogTime?: () => void;
   /** Enables the "Project" time estimate in the reps-line editor. */
   projectionContext?: ProjectionContext;
 }) {
@@ -102,6 +110,26 @@ export function NotationDocument({
                   >
                     {row.text}
                   </button>
+                  {onMoveLine && row.kind !== "round-close" && (
+                    <>
+                      <button
+                        type="button"
+                        aria-label="Move up"
+                        onClick={() => onMoveLine(row.id, -1)}
+                        className="p-1 text-text-tertiary opacity-60 active:opacity-100"
+                      >
+                        <ChevronUp size={13} />
+                      </button>
+                      <button
+                        type="button"
+                        aria-label="Move down"
+                        onClick={() => onMoveLine(row.id, 1)}
+                        className="p-1 text-text-tertiary opacity-60 active:opacity-100"
+                      >
+                        <ChevronDown size={13} />
+                      </button>
+                    </>
+                  )}
                   {onDeleteLine && (
                     <button
                       type="button"
@@ -125,7 +153,12 @@ export function NotationDocument({
         );
       })}
       {onAddLine && (
-        <AddLineRow depth={0} onAdd={(line) => onAddLine(line)} projectionContext={projectionContext} />
+        <AddLineRow
+          depth={0}
+          onAdd={(line) => onAddLine(line)}
+          onLogTime={onLogTime}
+          projectionContext={projectionContext}
+        />
       )}
     </div>
   );
@@ -141,10 +174,12 @@ type DraftKind = "reps" | "text" | "round";
 function AddLineRow({
   depth,
   onAdd,
+  onLogTime,
   projectionContext,
 }: {
   depth: number;
   onAdd: (line: PracticeLine) => void;
+  onLogTime?: () => void;
   projectionContext?: ProjectionContext;
 }) {
   const [draftKind, setDraftKind] = useState<DraftKind | null>(null);
@@ -200,29 +235,42 @@ function AddLineRow({
   }
 
   return (
-    <div style={{ paddingLeft: depth * 16 }} className="flex items-center gap-1 py-1">
-      <button
-        type="button"
-        onClick={() => setDraftKind("reps")}
-        aria-label="Add line"
-        className="rounded-lg border border-dashed border-border p-1 text-text-tertiary active:opacity-70"
-      >
-        <Plus size={12} />
-      </button>
-      <button
-        type="button"
-        onClick={() => setDraftKind("text")}
-        className="rounded-lg border border-dashed border-border px-1.5 py-1 text-[11px] text-text-tertiary active:opacity-70"
-      >
-        Note
-      </button>
-      <button
-        type="button"
-        onClick={() => setDraftKind("round")}
-        className="rounded-lg border border-dashed border-border px-1.5 py-1 text-[11px] text-text-tertiary active:opacity-70"
-      >
-        Round
-      </button>
+    <div style={{ paddingLeft: depth * 16 }}>
+      <div className="py-1">
+        <button
+          type="button"
+          onClick={() => setDraftKind("reps")}
+          aria-label="Add line"
+          className="rounded-lg border border-dashed border-border p-1 text-text-tertiary active:opacity-70"
+        >
+          <Plus size={12} />
+        </button>
+      </div>
+      <div className="flex items-center gap-1 pb-1">
+        <button
+          type="button"
+          onClick={() => setDraftKind("text")}
+          className="rounded-lg border border-dashed border-border px-1.5 py-1 text-[11px] text-text-tertiary active:opacity-70"
+        >
+          Note
+        </button>
+        <button
+          type="button"
+          onClick={() => setDraftKind("round")}
+          className="rounded-lg border border-dashed border-border px-1.5 py-1 text-[11px] text-text-tertiary active:opacity-70"
+        >
+          Round
+        </button>
+        {onLogTime && (
+          <button
+            type="button"
+            onClick={onLogTime}
+            className="rounded-lg border border-dashed border-border px-1.5 py-1 text-[11px] text-text-tertiary active:opacity-70"
+          >
+            Log time
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -402,7 +450,7 @@ function RepLineEditor({
           distance: Math.max(0, Number(distanceText) || 0),
           stroke: stroke ?? "free",
           course: projectionContext.course,
-          tag: tag.trim() || null,
+          setType: projectionContext.setType,
           intervalSeconds: parseInterval(intervalText),
         },
         projectionContext.history,

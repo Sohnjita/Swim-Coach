@@ -68,6 +68,7 @@ export default function SetsPage() {
                         distance: repShape.distance,
                         stroke: repShape.stroke ?? "free",
                         course: template.course,
+                        setType: template.type,
                         baseIntervalSeconds: repShape.intervalSeconds,
                       },
                       history,
@@ -81,7 +82,7 @@ export default function SetsPage() {
                   >
                     <div className="min-w-0">
                       <p className="text-sm font-medium text-text-primary">
-                        {template.label || template.type}
+                        {template.label || "Untitled set"}
                       </p>
                       <p className="text-xs text-text-tertiary">
                         {countReps(template.lines)} reps · {totalDistance(template.lines)}{" "}

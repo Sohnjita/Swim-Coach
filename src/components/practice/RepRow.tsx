@@ -38,7 +38,6 @@ export function RepRow({
           {rep.repIndex}
         </span>
         <input
-          inputMode="decimal"
           placeholder="mm:ss.ff"
           value={timeText}
           onChange={(e) => setTimeText(e.target.value)}
@@ -140,11 +139,11 @@ export function RepRow({
             />
           </label>
           <label className="col-span-2 text-xs text-text-tertiary">
-            Tag (e.g. &quot;best avg&quot;) — groups this rep with similar-effort history for scoring
+            Notes
             <input
               value={rep.notes ?? ""}
               onChange={(e) => onChange({ ...rep, notes: e.target.value || undefined })}
-              placeholder="best avg"
+              placeholder="optional"
               className="mt-1 h-9 w-full rounded-lg border border-border bg-bg-elevated px-2 text-[13px] text-text-primary outline-none focus:border-accent"
             />
           </label>

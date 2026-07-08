@@ -37,7 +37,7 @@ export function practiceSummaryLine(practice: Practice): string {
 }
 
 export function emptyPracticeSet(): PracticeSet {
-  return { id: newId(), type: "aerobic", label: "", lines: [], reps: [] };
+  return { id: newId(), type: "aerobic", label: "", lines: [], reps: [], setScore: null };
 }
 
 /** Builds a fresh, unsaved Practice — one empty block ready for line-by-line editing. */
@@ -49,13 +49,14 @@ export function newPractice(date: string, course: Course = "SCY", initialSet?: P
     course,
     customPoolLengthMeters: null,
     focus: "aerobic",
-    sets: [initialSet ?? emptyPracticeSet()],
+    sets: initialSet ? [initialSet] : [],
     sleepHours: null,
     bodyWeightLbs: null,
     gymThatDay: false,
     overallRpe: null,
     createdAt: now,
     updatedAt: now,
+    practiceScore: null,
   };
 }
 
@@ -78,5 +79,6 @@ export function makeSetFromTemplate(template: SetTemplate): PracticeSet {
     label: template.label,
     lines: cloneLinesWithFreshIds(template.lines),
     reps: [],
+    setScore: null,
   };
 }

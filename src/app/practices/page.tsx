@@ -15,7 +15,7 @@ import {
   Trophy,
   Upload,
 } from "lucide-react";
-import { db, newId, SCORING_CONFIG_ID } from "@/lib/db";
+import { db, newId } from "@/lib/db";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -23,20 +23,22 @@ import { ScoreRing } from "@/components/ui/ScoreRing";
 import { SwipeToDeleteRow } from "@/components/ui/SwipeToDeleteRow";
 import { Field, Input } from "@/components/ui/Field";
 import { MeetResultForm } from "@/components/practice/MeetResultForm";
-import { buildRepHistory, DEFAULT_SCORING_CONFIG, scorePractice } from "@/lib/scoring";
 import { newPractice, practiceSummaryLine } from "@/lib/practiceHelpers";
 import { formatTime } from "@/lib/conversions";
 import { formatDateLabel, todayISO } from "@/lib/format";
 import { eventLabel } from "@/lib/events";
 import { cn } from "@/lib/cn";
 import {
+  buildTrainingItems,
+  groupMeetResults,
   SORT_LABEL,
-  sortPractices,
+  sortTrainingItems,
   toggleSort,
+  type MeetGroup,
   type SortKey,
   type SortSpec,
 } from "@/lib/practiceSort";
-import type { CalendarEvent, Meet, MeetResult, Practice } from "@/lib/types";
+import type { CalendarEvent, Practice } from "@/lib/types";
 
 const SORT_KEYS: SortKey[] = ["date", "score", "yardage", "type"];
 
@@ -53,28 +55,6 @@ const FILTERS: { label: string; value: FilterType }[] = [
   { label: "Lifts", value: "lift" },
 ];
 
-interface MeetGroup {
-  meet: Meet;
-  results: MeetResult[];
-}
-
-function groupMeetResults(results: MeetResult[], meets: Meet[]): MeetGroup[] {
-  const meetsById = new Map(meets.map((m) => [m.id, m]));
-  const byMeetId = new Map<string, MeetResult[]>();
-  for (const r of results) {
-    const list = byMeetId.get(r.meetId) ?? [];
-    list.push(r);
-    byMeetId.set(r.meetId, list);
-  }
-  const groups: MeetGroup[] = [];
-  for (const [meetId, group] of byMeetId) {
-    const meet = meetsById.get(meetId);
-    if (!meet) continue;
-    groups.push({ meet, results: [...group].sort((a, b) => a.date.localeCompare(b.date)) });
-  }
-  return groups;
-}
-
 export default function PracticesPage() {
   const router = useRouter();
   const practices = useLiveQuery(() => db.practices.toArray(), []) ?? [];
@@ -83,19 +63,14 @@ export default function PracticesPage() {
   const calendarEvents = useLiveQuery(() => db.calendarEvents.toArray(), []) ?? [];
   const lifts = calendarEvents.filter((e) => e.type === "lift");
 
-  const scoringConfig =
-    useLiveQuery(() => db.scoringConfig.get(SCORING_CONFIG_ID), []) ??
-    DEFAULT_SCORING_CONFIG;
   const [sortSpec, setSortSpec] = useState<SortSpec | null>({ key: "date", dir: "desc" });
   const [filter, setFilter] = useState<FilterType>("all");
   const [showAddMenu, setShowAddMenu] = useState(false);
 
-  const history = buildRepHistory(practices, scoringConfig);
-  const sortedPractices = sortPractices(practices, sortSpec, history, scoringConfig);
-  const meetGroups = groupMeetResults(meetResults, meets).sort((a, b) =>
-    b.meet.startDate.localeCompare(a.meet.startDate),
-  );
-  const sortedLifts = [...lifts].sort((a, b) => b.date.localeCompare(a.date));
+  const meetGroups = groupMeetResults(meetResults, meets);
+  const trainingItems = buildTrainingItems(practices, meetGroups, lifts);
+  const filteredItems = trainingItems.filter((item) => filter === "all" || item.kind === filter);
+  const sortedItems = sortTrainingItems(filteredItems, sortSpec ?? { key: "date", dir: "desc" });
 
   async function handleNewPractice() {
     const practice = newPractice(todayISO());
@@ -123,10 +98,7 @@ export default function PracticesPage() {
     await db.calendarEvents.update(lift.id, { completed: !lift.completed });
   }
 
-  const isEmpty = practices.length === 0 && meetGroups.length === 0 && lifts.length === 0;
-  const showPractices = filter === "all" || filter === "practice";
-  const showMeets = filter === "all" || filter === "meet";
-  const showLifts = filter === "all" || filter === "lift";
+  const isEmpty = trainingItems.length === 0;
 
   return (
     <div>
@@ -184,59 +156,58 @@ export default function PracticesPage() {
               ))}
             </div>
 
-            {filter === "practice" && (
-              <div className="mb-3 flex flex-wrap items-center gap-3">
-                {SORT_KEYS.map((key) => {
-                  const active = sortSpec?.key === key;
-                  const showUp = active && sortSpec!.dir === "desc";
-                  return (
-                    <button
-                      key={key}
-                      type="button"
-                      onClick={() => setSortSpec((prev) => toggleSort(prev, key))}
-                      className={cn(
-                        "flex items-center gap-1 text-xs whitespace-nowrap",
-                        active ? "font-medium text-accent" : "text-text-tertiary",
-                      )}
-                    >
-                      {SORT_LABEL[key]}
-                      {active && (showUp ? <ArrowUp size={11} /> : <ArrowDown size={11} />)}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
+            <div className="mb-3 flex flex-wrap items-center gap-3">
+              {SORT_KEYS.map((key) => {
+                const active = sortSpec?.key === key;
+                const showUp = active && sortSpec!.dir === "desc";
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setSortSpec((prev) => toggleSort(prev, key))}
+                    className={cn(
+                      "flex items-center gap-1 text-xs whitespace-nowrap",
+                      active ? "font-medium text-accent" : "text-text-tertiary",
+                    )}
+                  >
+                    {SORT_LABEL[key]}
+                    {active && (showUp ? <ArrowUp size={11} /> : <ArrowDown size={11} />)}
+                  </button>
+                );
+              })}
+            </div>
 
             <div className="divide-y divide-border/40">
-              {showPractices &&
-                sortedPractices.map((practice) => (
-                  <PracticeRow
-                    key={practice.id}
-                    practice={practice}
-                    score={scorePractice(practice, history, scoringConfig).practiceScore}
-                    onClick={() => router.push(`/practices/detail?id=${practice.id}`)}
-                    onDelete={() => handleDeletePractice(practice.id)}
-                  />
-                ))}
-
-              {showMeets &&
-                meetGroups.map((group) => (
-                  <MeetGroupRow
-                    key={group.meet.id}
-                    group={group}
-                    onDelete={() => handleDeleteMeetGroup(group)}
-                  />
-                ))}
-
-              {showLifts &&
-                sortedLifts.map((lift) => (
+              {sortedItems.map((item) => {
+                if (item.kind === "practice") {
+                  return (
+                    <PracticeRow
+                      key={item.practice.id}
+                      practice={item.practice}
+                      score={item.score}
+                      onClick={() => router.push(`/practices/detail?id=${item.practice.id}`)}
+                      onDelete={() => handleDeletePractice(item.practice.id)}
+                    />
+                  );
+                }
+                if (item.kind === "meet") {
+                  return (
+                    <MeetGroupRow
+                      key={item.group.meet.id}
+                      group={item.group}
+                      onDelete={() => handleDeleteMeetGroup(item.group)}
+                    />
+                  );
+                }
+                return (
                   <LiftRow
-                    key={lift.id}
-                    lift={lift}
-                    onClick={() => toggleLiftCompleted(lift)}
-                    onDelete={() => handleDeleteLift(lift.id)}
+                    key={item.lift.id}
+                    lift={item.lift}
+                    onClick={() => toggleLiftCompleted(item.lift)}
+                    onDelete={() => handleDeleteLift(item.lift.id)}
                   />
-                ))}
+                );
+              })}
             </div>
           </>
         )}
