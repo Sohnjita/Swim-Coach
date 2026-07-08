@@ -4,7 +4,7 @@ import { useRef, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { Download, Upload } from "lucide-react";
 import { db, getProfile, getScoringConfig } from "@/lib/db";
-import { DEFAULT_SCORING_CONFIG } from "@/lib/scoring";
+import { buildRepHistory, DEFAULT_SCORING_CONFIG, stampPracticeScores } from "@/lib/scoring";
 import { buildBackup, downloadBackup, parseBackupFile, restoreBackup } from "@/lib/backup";
 import type { ScoringConfig, SwimmerProfile } from "@/lib/types";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -36,6 +36,8 @@ function SettingsForm({
   const [profile, setProfile] = useState(initialProfile);
   const [config, setConfig] = useState(initialConfig);
   const [saved, setSaved] = useState(false);
+  const [recalculating, setRecalculating] = useState(false);
+  const [recalculated, setRecalculated] = useState<number | null>(null);
 
   async function save() {
     await db.profile.put(profile);
@@ -46,6 +48,28 @@ function SettingsForm({
 
   function resetFormula() {
     setConfig({ ...DEFAULT_SCORING_CONFIG });
+  }
+
+  /**
+   * Scores are snapshotted onto each practice at save time (see
+   * stampPracticeScores) so they don't silently drift as new, unrelated
+   * practices get logged — but that also means imported practices, or ones
+   * saved under an older scoring formula, keep whatever score they were
+   * stamped with until someone opens and re-saves them. This recomputes
+   * every practice's scores in one pass against the current formula and
+   * full history, so importing or tweaking the formula above has a way to
+   * actually take effect everywhere at once.
+   */
+  async function recalculateAllScores() {
+    setRecalculating(true);
+    setRecalculated(null);
+    const practices = await db.practices.toArray();
+    const history = buildRepHistory(practices, config);
+    const stamped = practices.map((p) => stampPracticeScores(p, history, config));
+    await db.practices.bulkPut(stamped);
+    setRecalculating(false);
+    setRecalculated(stamped.length);
+    setTimeout(() => setRecalculated(null), 2500);
   }
 
   return (
@@ -188,9 +212,30 @@ function SettingsForm({
             />
           </div>
 
-          <Button variant="secondary" size="sm" className="mt-3 w-full" onClick={resetFormula}>
-            Reset to defaults
-          </Button>
+          <div className="mt-3 flex gap-2">
+            <Button variant="secondary" size="sm" className="flex-1" onClick={resetFormula}>
+              Reset to defaults
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              className="flex-1"
+              onClick={recalculateAllScores}
+              disabled={recalculating}
+            >
+              {recalculating ? "Recalculating..." : "Recalculate all scores"}
+            </Button>
+          </div>
+          {recalculated !== null && (
+            <p className="mt-2 text-xs text-accent">
+              Recalculated {recalculated} practice(s) against the formula above.
+            </p>
+          )}
+          <p className="mt-2 text-xs text-text-tertiary">
+            Scores are frozen onto each practice when you save it, so
+            importing practices or changing weights here won&apos;t change
+            past scores until you run this.
+          </p>
         </Card>
         </div>
 
